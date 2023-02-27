@@ -49,16 +49,16 @@ export interface StateLike<T> {
 export class State<T> implements StateLike<T> {
     protected _subscribers: StateSubscriber<T>[] = [];
     protected _value: T;
+    /**Metadata about state*/
+    readonly info: StateInfo | undefined
 
     /**State container
-     * @param init initial value of the state*/
+     * @param init initial value of the state
+     * @param info metadata for state*/
     constructor(init: T, info?: StateInfo) {
         this._value = init;
         this.info = info;
     }
-
-    /**Metadata about state*/
-    readonly info: StateInfo | undefined
 
     /**Returns if the state is read only*/
     get readonly(): boolean { return false; }

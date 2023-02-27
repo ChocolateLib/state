@@ -4,12 +4,6 @@ import { StateDerived } from "./stateDerived";
 /**State containing a boolean value*/
 export class StateBoolean extends State<boolean> { }
 
-/**State containing a number value*/
-export class StateNumber extends State<number> { }
-
-/**State containing a string value*/
-export class StateString extends State<string> { }
-
 /**State which Sums up multiple states*/
 export class StateSummer extends StateDerived<number, number>{
     /**State which Sums up multiple states
