@@ -21,7 +21,7 @@
     "prepublishOnly": "yarn run test && yarn run build:lib && yarn run build:pages"
   },
   "devDependencies": {
-    "cypress": "^11.2.0",
+    "cypress": "12.7.0",
     "cypress-vite": "^1.2.1",
     "start-server-and-test": "^1.14.0",
     "tslib": "^2.4.1",

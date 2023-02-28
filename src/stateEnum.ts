@@ -17,14 +17,14 @@ export type StateEnumList = {
 
 /**Use this type when you want to have an argument StateLimited with multiple types, this example will only work with the ValueLimitedLike*/
 export interface StateEnumLike<S extends StateEnumList> extends StateLike<keyof S> {
-    /**Returns all enums*/
-    get enums(): S
     /**Returns the values enums*/
-    get enum(): S[keyof S]
+    get enum(): S[keyof S] | undefined
     /**Returns the enum of a specific value*/
     getEnum(value: keyof S): S[keyof S]
+    /**Returns all enums*/
+    get getEnums(): S
     /**Checks if value is in enum list*/
-    checkEnum(value: keyof S): boolean
+    checkInEnum(value: keyof S): boolean
 }
 
 /**State with a fixed set of values each with meta data
@@ -35,6 +35,8 @@ export interface StateEnumLike<S extends StateEnumList> extends StateLike<keyof 
  *  'e1': { name: 'Enum 1' },
  *  'e2': { name: 'Enum 2' },
  * }
+ * It is a good idea to freze the enum
+ * Object.freeze(enums);
  * let stateEnum = new StateEnum('e1', enums);
  * 
  * Dynamic symbols
@@ -43,26 +45,40 @@ export interface StateEnumLike<S extends StateEnumList> extends StateLike<keyof 
  *  'e2': { name: 'Enum 2' },
  * }
  * let stateEnum = new StateEnum('e1', enums); */
-export class StateEnum<S extends StateEnumList> extends State<keyof S> {
+export class StateEnum<S extends StateEnumList> extends State<keyof S | undefined> {
     private _enums: S;
+    readonly placeholder: StateEnumEntry | undefined;
 
     /**State with a fixed set of values each with meta data
+     * Two usage examples
+     * 
+     * Fixed symbols has typechecking for 
+     * const enums = {
+     *  'e1': { name: 'Enum 1' },
+     *  'e2': { name: 'Enum 2' },
+     * }
+     * It is a good idea to freze the enum
+     * Object.freeze(enums);
+     * let stateEnum = new StateEnum('e1', enums);
+     * 
+     * Dynamic symbols
+     * let enums: StateEnumList = {
+     *  'e1': { name: 'Enum 1' },
+     *  'e2': { name: 'Enum 2' },
+     * }
+     * let stateEnum = new StateEnum('e1', enums); 
      * @param init initial value of the Value
      * @param enums 
      * @param info metadata for state*/
-    constructor(init: keyof S, enums: S, info?: StateInfo) {
+    constructor(enums: S, init?: keyof S, placeholder?: StateEnumEntry, info?: StateInfo) {
         super(init, info);
         this._enums = enums;
-    }
-
-    /**Returns all enums*/
-    get enums(): S {
-        return this._enums;
+        this.placeholder = placeholder;
     }
 
     /**Returns the values enums*/
-    get enum(): S[keyof S] {
-        return this._enums[this._value];
+    get enum(): S[keyof S] | undefined {
+        return this._enums[<keyof S>this._value] || this.placeholder;
     }
 
     /**Returns the enum of a specific value*/
@@ -70,8 +86,13 @@ export class StateEnum<S extends StateEnumList> extends State<keyof S> {
         return this._enums[value];
     }
 
+    /**Returns all enums*/
+    get getEnums(): S {
+        return this._enums;
+    }
+
     /**Checks if value is in enum list*/
-    checkEnum(value: keyof S): boolean {
+    checkInEnum(value: keyof S): boolean {
         if (!this._enums || value in this._enums) {
             return true;
         }
@@ -80,7 +101,7 @@ export class StateEnum<S extends StateEnumList> extends State<keyof S> {
 
     /**This sets the value and dispatches an event*/
     set set(val: keyof S) {
-        if (val !== this._value && this.checkEnum(val)) {
+        if (val !== this._value && this.checkInEnum(val)) {
             this._value = val;
             this.update(val);
         }

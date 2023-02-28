@@ -1,47 +1,58 @@
-import { StateLimiter, StateLimited } from "./stateLimited";
+import { State, StateInfo, StateLike } from "./state";
 
-/**Extension of Value class to allow a limited number*/
-export class StateNumber extends StateLimited<number> {
-    private _min: number;
-    private _max: number;
-    private _step: number | undefined;
-    private _halfStep: number = 0;
-    /**Decimals is always has the same amount of decimals as the step size*/
+/**Defines the allowed step of the StateNumber */
+export interface StateNumberStep {
+    /**Size of steps, eg 2 means 2,4,6,8 are allowed*/
+    size: number,
+    /**Step start, eg  */
+    start?: number,
+}
+
+/**Use this type when you want to have an argument StateLimited with multiple types, this example will only work with the ValueLimitedLike*/
+export interface StateNumberLike extends StateLike<number | undefined> {
+    readonly min: number;
+    readonly max: number;
+    readonly decimals: number;
+    readonly step: StateNumberStep | undefined;
+}
+
+/**State for representing a number with a limited range/precision*/
+export class StateNumber extends State<number | undefined> {
+    readonly min: number;
+    readonly max: number;
     readonly decimals: number = 0;
+    readonly step: StateNumberStep | undefined;
 
-    /**Constructor
-     * @param init initial value of the Value
+    /**State for representing a number with a limited range/precision
+     * @param init initial value
      * @param min minimum allowed value
      * @param max maximum allowed value
-     * @param step step increment value must fall on eg 2 allows increments of 2 so 0,2,4,6 etc.*/
-    constructor(init: number, min: number = -Infinity, max: number = Infinity, step?: number, limiters?: StateLimiter<number>[]) {
-        super(init, limiters);
-        this._min = min;
-        this._max = max;
-        if (step) {
-            this._step = step;
-            this._halfStep = step / 2;
-            let split = step.toString().split('.')[1];
-            this.decimals = (step < 1e+14 ? (split ? split.length : 0) : 0);
-        }
+     * @param decimals amount of segnificant decimals for the value
+     * @param step definition of allowed step of number eg, 0.3,0.5,0.7*/
+    constructor(init?: number, min: number = -Infinity, max: number = Infinity, decimals: number = 0, step?: StateNumberStep, info?: StateInfo) {
+        super(init, info);
+        this.min = min;
+        this.max = max;
+        this.decimals = decimals;
+        this.step = step;
     }
 
     /** This sets the value and dispatches an event*/
-    set set(val: number) {
-        if (this._step) {
-            let mod = val % this._step;
-            val = Number((mod > this._halfStep ? val + (this._step - mod) : val - mod).toFixed(this.decimals));
+    set set(value: number) {
+        if (value !== this._value) {
+            if (this.step) {
+                if (this.step.start) {
+                    value = (Math.round((value - this.step.start) / this.step.size)) * this.step.size + this.step.start;
+                } else {
+                    value = (Math.round(value / this.step.size)) * this.step.size;
+                }
+            }
+            value = Math.min(this.max, Math.max(this.min, value));
+            if (value !== this._value) {
+                this._value = value;
+                this.update(value);
+            }
         }
-        val = Math.min(this._max, Math.max(this._min, val));
-        if (val !== this._value && this.checkLimit(val)) {
-            this._value = val;
-            this.update(val);
-        }
-    }
-
-    /** This sets the value without checking limits and dispatches an event*/
-    set setUnchecked(val: number) {
-        super.set = val;
     }
 }
 
