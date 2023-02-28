@@ -26,7 +26,7 @@ describe('Enum information', function () {
     it('Enums selection can be retrieved from enum', function () {
         const enums = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         let state = new StateEnum(enums);
-        expect(state.getEnums).equal(enums);
+        expect(state.enums).equal(enums);
     });
     it('Specific enum entry can be retrived', function () {
         const enums = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
@@ -41,7 +41,7 @@ describe('Enum information', function () {
     it('Without initial value and placeholder set, current enum is placeholder', function () {
         const enums = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         const placeholder = { name: 'Test' };
-        let state = new StateEnum(enums, undefined, placeholder);
+        let state = new StateEnum(enums, undefined, { placeholder });
         expect(state.enum).equal(placeholder);
     });
     it('With initial value and placeholder unset, current enum is selected enum', function () {
@@ -52,7 +52,7 @@ describe('Enum information', function () {
     it('With initial value and placeholder set, current enum is selected enum', function () {
         const enums = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         const placeholder = { name: 'Test' };
-        let state = new StateEnum(enums, 'e1', placeholder);
+        let state = new StateEnum(enums, 'e1', { placeholder });
         expect(state.enum).equal(enums.e1);
     });
 })

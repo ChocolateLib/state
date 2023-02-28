@@ -1,38 +1,44 @@
-import { stringByteLimit } from "@chocolatelib/string";
-import { StateLimiter, StateLimited } from "./stateLimited";
+import { State, StateInfo } from "./state";
 
-/**Extension of Value class to allow limiting Value value*/
-export class StateString extends StateLimited<string> {
-    private _regEx: RegExp | undefined;
+
+
+
+/**State representing a string value*/
+export class StateString extends State<string | undefined> {
     private _maxLength: number | undefined;
     private _maxByteLength: number | undefined;
 
     /**Constructor
      * @param init initial value of the Value
      * @param maxLength the maximum character length of the string
-     * @param maxByteLength the maximum byte length of the string
-     * @param allowed list of allowed values for string*/
-    constructor(init: string, maxLength?: number, maxByteLength?: number, regEx?: RegExp, limiters?: StateLimiter<string>[]) {
-        super(init, limiters);
-        this._regEx = regEx;
+     * @param maxByteLength the maximum byte length of the string*/
+    constructor(init: string, maxLength?: number, maxByteLength?: number, info?: StateInfo) {
+        super(init, info);
         this._maxLength = maxLength;
         this._maxByteLength = maxByteLength;
     }
 
+    options(options: { info?: StateInfo, asdf: number }) {
+
+    }
+
     /** This sets the value and dispatches an event*/
-    set set(val: string) {
-        if (this._maxLength && val.length > this._maxLength) {
-            val = val.slice(0, this._maxLength);
-        }
-        if (this._maxByteLength) {
-            val = stringByteLimit(val, this._maxByteLength);
-        }
-        if (this._regEx && !this._regEx.test(val)) {
-            return;
-        }
-        if (val !== this._value && this.checkLimit(val)) {
-            this._value = val;
-            this.update(val);
+    set set(value: string) {
+        if (value !== this._value) {
+            if (this._maxLength && value.length > this._maxLength) {
+                value = value.slice(0, this._maxLength);
+            }
+            if (this._maxByteLength) {
+                let encoder = new TextEncoder().encode(value);
+                value = new TextDecoder().decode(encoder.slice(0, this._maxByteLength));
+                if (value.at(-1)?.charCodeAt(0) === 65533) {
+                    value = value.slice(0, -1);
+                }
+            }
+            if (value !== this._value) {
+                this._value = value;
+                this.update(value);
+            }
         }
     }
 }

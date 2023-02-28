@@ -1,9 +1,10 @@
 import { State, StateAsync, StateDerived, StateNumber } from "../src"
 
-
-
-
-
+let state = new StateNumber(0, { step: { size: 2 } });
+state.set = 4;
+console.warn(state.get)
+state.set = 5.5;
+console.warn(state.get)
 
 //For async tests
 

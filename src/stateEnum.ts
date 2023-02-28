@@ -1,16 +1,11 @@
-import { State, StateInfo, StateLike } from "./state";
+import { State, StateInfo, StateLike, StateOptions } from "./state";
 
-/**Entry item for enum */
 export type StateEnumEntry = {
-    /**Name for entry */
     name: string,
-    /**Description for entry */
     description?: string,
-    /**Icon for entry */
     icon?: SVGSVGElement,
 }
 
-/**List of enum entries */
 export type StateEnumList = {
     [key: string]: StateEnumEntry
 }
@@ -25,6 +20,11 @@ export interface StateEnumLike<S extends StateEnumList> extends StateLike<keyof 
     get getEnums(): S
     /**Checks if value is in enum list*/
     checkInEnum(value: keyof S): boolean
+}
+
+export interface StateEnumOptions<T extends StateEnumList> extends StateOptions {
+    enums?: T,
+    placeholder?: StateEnumEntry,
 }
 
 /**State with a fixed set of values each with meta data
@@ -45,10 +45,7 @@ export interface StateEnumLike<S extends StateEnumList> extends StateLike<keyof 
  *  'e2': { name: 'Enum 2' },
  * }
  * let stateEnum = new StateEnum('e1', enums); */
-export class StateEnum<S extends StateEnumList> extends State<keyof S | undefined> {
-    private _enums: S;
-    readonly placeholder: StateEnumEntry | undefined;
-
+export class StateEnum<T extends StateEnumList> extends State<keyof T | undefined> {
     /**State with a fixed set of values each with meta data
      * Two usage examples
      * 
@@ -66,44 +63,57 @@ export class StateEnum<S extends StateEnumList> extends State<keyof S | undefine
      *  'e1': { name: 'Enum 1' },
      *  'e2': { name: 'Enum 2' },
      * }
-     * let stateEnum = new StateEnum('e1', enums); 
-     * @param init initial value of the Value
-     * @param enums 
-     * @param info metadata for state*/
-    constructor(enums: S, init?: keyof S, placeholder?: StateEnumEntry, info?: StateInfo) {
-        super(init, info);
-        this._enums = enums;
-        this.placeholder = placeholder;
+     * let stateEnum = new StateEnum('e1', enums);*/
+    constructor(enums: T, init?: keyof T, options?: StateEnumOptions<T>) {
+        super(init);
+        this.enums = enums;
+        if (options) {
+            this.options = options;
+        }
     }
 
+    /**Placeholder for when state value is undefined */
+    readonly placeholder: StateEnumEntry | undefined;
+
+    /**Enums struct */
+    readonly enums: T;
+
     /**Returns the values enums*/
-    get enum(): S[keyof S] | undefined {
-        return this._enums[<keyof S>this._value] || this.placeholder;
+    get enum(): T[keyof T] | undefined {
+        return this.enums[<keyof T>this._value] || this.placeholder;
     }
 
     /**Returns the enum of a specific value*/
-    getEnum(value: keyof S): S[keyof S] {
-        return this._enums[value];
-    }
-
-    /**Returns all enums*/
-    get getEnums(): S {
-        return this._enums;
+    getEnum(value: keyof T): T[keyof T] {
+        return this.enums[value];
     }
 
     /**Checks if value is in enum list*/
-    checkInEnum(value: keyof S): boolean {
-        if (!this._enums || value in this._enums) {
+    checkInEnum(value: keyof T): boolean {
+        if (!this.enums || value in this.enums) {
             return true;
         }
         return false;
     }
 
     /**This sets the value and dispatches an event*/
-    set set(val: keyof S) {
+    set set(val: keyof T) {
         if (val !== this._value && this.checkInEnum(val)) {
             this._value = val;
             this.update(val);
         }
+    }
+
+    /**Options of state */
+    set options(options: StateEnumOptions<T>) {
+        if (options.enums) {
+            //@ts-expect-error
+            this.enums = options.enums;
+        }
+        if (options.placeholder) {
+            //@ts-expect-error
+            this.placeholder = options.placeholder;
+        }
+        super.options = options;
     }
 }
