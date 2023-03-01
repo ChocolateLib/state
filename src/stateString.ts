@@ -1,36 +1,34 @@
-import { State, StateInfo } from "./state";
+import { State, StateOptions } from "./state";
 
-
-
+export interface StateStringOptions extends StateOptions {
+    maxLength?: number,
+    maxByteLength?: number,
+}
 
 /**State representing a string value*/
 export class StateString extends State<string | undefined> {
-    private _maxLength: number | undefined;
-    private _maxByteLength: number | undefined;
-
-    /**Constructor
-     * @param init initial value of the Value
-     * @param maxLength the maximum character length of the string
-     * @param maxByteLength the maximum byte length of the string*/
-    constructor(init: string, maxLength?: number, maxByteLength?: number, info?: StateInfo) {
-        super(init, info);
-        this._maxLength = maxLength;
-        this._maxByteLength = maxByteLength;
+    /**State representing a string value*/
+    constructor(init: string, options?: StateStringOptions) {
+        super(init);
+        if (options) {
+            this.options = options;
+        }
     }
 
-    options(options: { info?: StateInfo, asdf: number }) {
+    /**Maximum character lenght of string*/
+    readonly maxLength: number | undefined;
 
-    }
+    /**Maximum byte length of string*/
+    readonly maxByteLength: number | undefined;
 
     /** This sets the value and dispatches an event*/
     set set(value: string) {
         if (value !== this._value) {
-            if (this._maxLength && value.length > this._maxLength) {
-                value = value.slice(0, this._maxLength);
+            if (this.maxLength && value.length > this.maxLength) {
+                value = value.slice(0, this.maxLength);
             }
-            if (this._maxByteLength) {
-                let encoder = new TextEncoder().encode(value);
-                value = new TextDecoder().decode(encoder.slice(0, this._maxByteLength));
+            if (this.maxByteLength) {
+                value = (new TextDecoder).decode((new TextEncoder).encode(value).slice(0, this.maxByteLength));
                 if (value.at(-1)?.charCodeAt(0) === 65533) {
                     value = value.slice(0, -1);
                 }
@@ -40,5 +38,18 @@ export class StateString extends State<string | undefined> {
                 this.update(value);
             }
         }
+    }
+
+    /**Options of state */
+    set options(options: StateStringOptions) {
+        if (options.maxLength) {
+            //@ts-expect-error
+            this.maxLength = options.maxLength;
+        }
+        if (options.maxByteLength) {
+            //@ts-expect-error
+            this.maxByteLength = options.maxByteLength;
+        }
+        super.options = options;
     }
 }

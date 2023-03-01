@@ -1,4 +1,4 @@
-import { State, StateLike } from "./state";
+import { State } from "./state";
 
 /**The function type for array value subscriber
  * @param index the index of addition or deletion
@@ -6,56 +6,9 @@ import { State, StateLike } from "./state";
  * @param values contains any new elements added to the array*/
 export type StateArraySubscriber<T> = (index: number, amount: number, values?: T[]) => void
 
-/**Use this type when you want to have an argument StateArray with multiple types, this example will only work with the StateArrayLike*/
-export interface StateArrayLike<T> extends StateLike<T[]> {
-    /**This adds a function as a subscriber to the state*/
-    subscribeArray(func: StateArraySubscriber<any>): typeof func
-    /**This removes a function as a subscriber to the state*/
-    unsubscribeArray(func: StateArraySubscriber<any>): typeof func
-    /**Returns wether the state has subscribers, true means it has at least one subscribers*/
-    get arrayInUse(): boolean
-    /**Returns wether the state has a specific subscriber, true means it has that subscriber*/
-    hasArraySubscriber(func: StateArraySubscriber<T>): boolean
-    /**Adds an element to the back of the array */
-    push(...elem: T[]): void
-    /**Adds an element to the front of the array */
-    unshift(...elem: T[]): void
-    /**Removes an element from the back of the array*/
-    pop(): T | undefined
-    /**Removes an element from the front of the array*/
-    shift(): T | undefined
-    /** Removes elements from an array and, if necessary, inserts new elements in their place, returning the removed elements.
-     * @param start The zero-based location in the array from which to start removing elements.
-     * @param deleteCount The number of elements to remove.
-     * @param elem Elements to insert into the array in place of the removed elements.
-     * @returns An array containing the elements that were removed.*/
-    splice(start: number, deleteCount: number, ...elem: T[]): T[]
-    /**Returns the index of the first occurrence of a value in an array, or -1 if it is not present.
-     * @param val The value to locate in the array
-     * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the search starts at index 0*/
-    indexOf(val: T, fromIndex?: number): number
-    /**Returns if the given item is included in the array*/
-    includes(val: T): boolean
-    /**Empties array of all elements*/
-    empty(): void
-    /**Returns length of array */
-    get length(): number
-    /**Removes the given element if it exists, returns true if any elements were found and deleted
-     * @param val The value to locate in the array
-     * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the search starts at index 0*/
-    remove(val: T, fromIndex?: number): boolean
-    /**Gets the value from the given index*/
-    getIndex(index: number): T | undefined
-    /**Sets the value from the given index
-     * @param index the index to set the value of
-     * @param value the value to set the index to
-     * @returns the given value */
-    setIndex(index: number, value: T): T
-}
-
 /**State representing an array*/
 export class StateArray<T> extends State<T[]> {
-    private _arraySubscribers: StateArraySubscriber<T>[] = [];
+    private _arraySubscribers: StateArraySubscriber<any>[] = [];
 
     /**Calls all array subscribers
      * @param index the index of addition or deletion
@@ -73,13 +26,13 @@ export class StateArray<T> extends State<T[]> {
     }
 
     /**This adds a function as a subscriber to the state*/
-    subscribeArray(func: StateArraySubscriber<T>): typeof func {
+    subscribeArray<B = T>(func: StateArraySubscriber<B>): typeof func {
         this._arraySubscribers.push(func);
         return func;
     }
 
     /**This removes a function as a subscriber to the state*/
-    unsubscribeArray(func: StateArraySubscriber<T>): typeof func {
+    unsubscribeArray<B = T>(func: StateArraySubscriber<B>): typeof func {
         let index = this._arraySubscribers.indexOf(func);
         if (index != -1) {
             this._arraySubscribers.splice(index, 1);

@@ -1,7 +1,7 @@
 /// <reference types="cypress" />
 import { StateNumber } from "../../src"
 
-describe('Initial valueLimiter should not limit initial value', function () {
+describe('Setup', function () {
     it('Should have an initial value of undefined', function () {
         expect((new StateNumber()).get).equal(undefined);
     });

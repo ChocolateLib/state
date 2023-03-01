@@ -1,9 +1,7 @@
-import { State, StateSubscriber, StateLike } from "./state";
+import { State, StateInfo, StateSubscriber } from "./state";
 
-/**Use this type when you want to have an argument StateDerived with multiple types, this example will only work with the StateDerivedLike*/
-export interface StateDerivedLike<T, I> extends StateLike<T | undefined> {
-    /**Sets the states to derive from*/
-    set states(states: StateLike<I>[])
+export interface StateDerivedOptions {
+    info?: StateInfo
 }
 
 type WriteFunc<T, I> = (newValue: T, values: I[], valuesBuffer: I[], oldValue?: T) => void
@@ -12,51 +10,40 @@ type WriteFunc<T, I> = (newValue: T, values: I[], valuesBuffer: I[], oldValue?: 
  * @param T type of value derived from states
  * @param I allowed types for */
 export class StateDerived<T, I> extends State<T | undefined> {
-    protected _states: StateLike<I>[];
+    protected _states: State<I>[];
     protected _stateBuffers: I[] = [];
     protected _stateSubscribers: StateSubscriber<I>[] = [];
 
     protected _needOld: boolean = false;
     protected _hasValue: boolean = false;
     protected _gettingValue: boolean = false;
-    protected _promises: ((value: T) => void)[] = [];
+    protected _promises: StateSubscriber<any>[] = [];
 
     readonly readFunc: (val: I[]) => T;
     readonly writeFunc: WriteFunc<T, I> | undefined;
-    private _async: boolean = false;
 
     /**State deriving a value from multiple other states
      * @param states list of states to derive from
      * @param readFunc function to use for deriving values
      * @param writeFunc function used to reverse derive
-     * @param needOld set true if the write function need the old value to function*/
-    constructor(readFunc: (values: I[]) => T, states: StateLike<I>[] = [], writeFunc?: WriteFunc<T, I>, needOld: boolean = false) {
+     * @param needOld set true if the write function need the old value to work*/
+    constructor(readFunc: (values: I[]) => T, states: State<I>[] = [], writeFunc?: WriteFunc<T, I>, needOld: boolean = false, options?: StateDerivedOptions) {
         super(undefined);
         this._states = [...states];
-        for (let i = 0; i < states.length; i++) {
-            this._async = this._async || states[i].async;
-        }
         this.readFunc = readFunc;
         this.writeFunc = writeFunc;
         this._needOld = needOld;
+        if (options) {
+            this.options = options;
+        }
     }
 
-    /**Returns if the state is read only*/
-    get readonly(): boolean { return !Boolean(this.writeFunc); }
-
-    /**Returns if the state is async and will return an async value*/
-    get async(): boolean { return this._async; }
-
     /**Sets the states to derive from*/
-    set states(states: StateLike<I>[]) {
+    set states(states: State<I>[]) {
         if (this._subscribers.length) {
             this._disconnect();
         }
         this._states = [...states];
-        this._async = false;
-        for (let i = 0; i < states.length; i++) {
-            this._async = this._async || states[i].async;
-        }
         if (this._subscribers.length) {
             this._connect();
         }
@@ -88,7 +75,7 @@ export class StateDerived<T, I> extends State<T | undefined> {
     set set(value: T) {
         if (this._states.length === 0 || !this.writeFunc) { return; }
         if (this._hasValue || !this._needOld) {
-            let values: I[] = Array(this._states.length);
+            const values: I[] = Array(this._states.length);
             this.writeFunc(value, values, this._stateBuffers, <T>this._value);
             for (let i = 0; i < this._states.length; i++) {
                 this._states[i].set = values[i];
@@ -99,7 +86,7 @@ export class StateDerived<T, I> extends State<T | undefined> {
             for (let i = 0; i < this._states.length; i++) {
                 this._stateBuffers[i] = <I>this._states[i].get;
             }
-            let values: I[] = Array(this._states.length);
+            const values: I[] = Array(this._states.length);
             this.writeFunc(value, values, this._stateBuffers, <T>this.readFunc(this._stateBuffers));
             for (let i = 0; i < this._states.length; i++) {
                 this._states[i].set = values[i];
@@ -107,8 +94,8 @@ export class StateDerived<T, I> extends State<T | undefined> {
             return;
         }
         (async () => {
-            let oldValue = await this.get;
-            let values: I[] = Array(this._states.length);
+            const oldValue = await this.get;
+            const values: I[] = Array(this._states.length);
             (<WriteFunc<T, I>>this.writeFunc)(value, values, this._stateBuffers, <T>oldValue);
             for (let i = 0; i < this._states.length; i++) {
                 this._states[i].set = values[i];
@@ -127,7 +114,7 @@ export class StateDerived<T, I> extends State<T | undefined> {
 
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
-    subscribe(func: StateSubscriber<T | undefined>, update?: boolean): StateSubscriber<T | undefined> {
+    subscribe<B = T>(func: StateSubscriber<B>, update?: boolean): typeof func {
         this._subscribers.push(func);
         if (update) {
             this._promises.push(func);
@@ -139,8 +126,8 @@ export class StateDerived<T, I> extends State<T | undefined> {
     }
 
     /**This removes a function as a subscriber to the state*/
-    unsubscribe(func: StateSubscriber<T | undefined>): StateSubscriber<T | undefined> {
-        let index = this._subscribers.indexOf(func);
+    unsubscribe<B = T>(func: StateSubscriber<B>): typeof func {
+        const index = this._subscribers.indexOf(func);
         if (index != -1) {
             this._subscribers.splice(index, 1);
         }
@@ -173,5 +160,14 @@ export class StateDerived<T, I> extends State<T | undefined> {
             this._states[i].unsubscribe(this._stateSubscribers[i]);
         }
         this._stateSubscribers = [];
+    }
+
+    /**Options of state */
+    set options(options: StateDerivedOptions) {
+        if (options.info) {
+            //@ts-expect-error
+            this.info = options.info;
+        }
+        this._updateOptions();
     }
 }

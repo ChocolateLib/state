@@ -10,7 +10,7 @@ export class StateAsync<T> extends State<T> {
     protected _singleGet: (state: this) => void
     protected _singleSet: ((value: T, state: this) => void) | undefined
     protected _hasValue: boolean = false;
-    protected _promises: ((val: T) => void)[] = [];
+    protected _promises: StateSubscriber<any>[] = [];
 
     constructor(setup: AsyncFunc<T>, teardown: AsyncFunc<T>, singleGet: AsyncFunc<T>, singleSet?: AsyncFuncSet<T>) {
         super(<T>undefined);
@@ -20,15 +20,9 @@ export class StateAsync<T> extends State<T> {
         this._singleSet = singleSet;
     }
 
-    /**Returns if the state is read only*/
-    get readonly(): boolean { return !Boolean(this._singleSet); }
-
-    /**Returns if the state is async and will return an async value*/
-    get async(): boolean { return true; }
-
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
-    subscribe(func: StateSubscriber<T>, update?: boolean): typeof func {
+    subscribe<B = T>(func: StateSubscriber<B>, update?: boolean): typeof func {
         this._subscribers.push(func);
         if (this._subscribers.length === 1) {
             this._setup(this);
@@ -41,7 +35,7 @@ export class StateAsync<T> extends State<T> {
     }
 
     /**This removes a function as a subscriber to the state*/
-    unsubscribe(func: StateSubscriber<T>): typeof func {
+    unsubscribe<B = T>(func: StateSubscriber<B>): typeof func {
         let index = this._subscribers.indexOf(func);
         if (index != -1) {
             this._subscribers.splice(index, 1);
@@ -67,7 +61,7 @@ export class StateAsync<T> extends State<T> {
         if (this._hasValue) {
             return this._value;
         } else {
-            let prom = new Promise<T>((a) => { this._promises.push(a); });
+            const prom = new Promise<T>((a) => { this._promises.push(a); });
             this._singleGet(this);
             return prom;
         }
@@ -93,7 +87,7 @@ export class StateAsync<T> extends State<T> {
     }
 
     /**Adds compatability with promise */
-    then(func: (val: T) => {}): void {
+    then(func: StateSubscriber<T>): void {
         if (this._hasValue) {
             func(this._value);
         } else {

@@ -1,16 +1,16 @@
-import { StateSubscriber, StateLike } from "./state";
+import { StateSubscriber, State } from "./state";
 
 /**Creates a link between two of more states
  * when linked the value of the first state is copied to the others*/
 export class StateLink<T> {
-    private _states: StateLike<T>[] = [];
+    private _states: State<T>[] = [];
     private _stateSubscribers: StateSubscriber<T>[] = [];
 
     /**Creates a link between two of more states
      * when linked the value of the first state is copied to the others
      * @param states initial Values to link
      * @param link if the link should be created instantly*/
-    constructor(states?: StateLike<T>[], link?: boolean) {
+    constructor(states?: State<T>[], link?: boolean) {
         if (states) {
             this.states(states, link);
         }
@@ -19,7 +19,7 @@ export class StateLink<T> {
     /**Changes the values which are linked
     * @param states initial Values to link
     * @param link if the link should be created instantly*/
-    states(states?: StateLike<T>[], link?: boolean): void {
+    states(states?: State<T>[], link?: boolean): void {
         this.unlink();
         if (states && states.length > 1) {
             this._states = states;

@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { StateArray, StateArrayLike } from "../../src"
+import { StateArray } from "../../src"
 
 describe('Initial value', function () {
     it('Should have an initial value of array', function () {
@@ -501,10 +501,10 @@ describe('Events', function () {
     });
 });
 
-describe('Value with single type must be able to be assignable to parameter with multiple types', function () {
-    it('Value with async getter', function () {
+describe('Other', function () {
+    it('State as a type with multiple generics', function () {
         let value = new StateArray([10]);
-        let func = (val: StateArrayLike<number | boolean>) => { return val }
+        let func = (val: StateArray<number | boolean>) => { return val }
         func(value);
     });
 });

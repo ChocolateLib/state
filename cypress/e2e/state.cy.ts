@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { State, StateLike } from "../../src"
+import { State } from "../../src"
 
 describe('Initial state', function () {
     it('Should have an initial state of null', function () {
@@ -227,27 +227,6 @@ describe('Options', function () {
         state.subscribeOptions((val) => { throw false });
         state.options = {};
     });
-
-
-
-
-
-
-
-
-
-
-    it('Manual update call with one subscribers', function (done) {
-        let state = new State(0);
-        state.subscribeOptions((val) => { if (val === state) { done() } else { done(new Error('Unexpected state')) } });
-        state.updateOptions();
-    });
-    it('Update call with skip of one subscribers', function (done) {
-        let state = new State(0);
-        let sub = state.subscribeOptions((val) => { done(new Error('Unexpected state')) });
-        state.updateOptionsSkip(sub);
-        done()
-    });
     it('Add one subscribers with update set true', function (done) {
         let state = new State(1);
         state.subscribeOptions((val) => { if (val === state) { done(); } else { done(new Error('State incorrect')) } }, true);
@@ -294,9 +273,9 @@ describe('Other', function () {
         let state = new State(10);
         expect(await state).equal(10);
     });
-    it('State like type', function () {
+    it('State as a type with multiple generics', function () {
         let state = new State(10);
-        let func = (val: StateLike<number | boolean>) => { return val }
+        let func = (val: State<number | boolean>) => { return val }
         func(state);
     });
 });

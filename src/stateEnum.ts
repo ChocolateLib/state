@@ -1,25 +1,13 @@
-import { State, StateInfo, StateLike, StateOptions } from "./state";
+import { State, StateOptions } from "./state";
 
 export type StateEnumEntry = {
     name: string,
     description?: string,
-    icon?: SVGSVGElement,
+    icon?: () => SVGSVGElement,
 }
 
 export type StateEnumList = {
     [key: string]: StateEnumEntry
-}
-
-/**Use this type when you want to have an argument StateLimited with multiple types, this example will only work with the ValueLimitedLike*/
-export interface StateEnumLike<S extends StateEnumList> extends StateLike<keyof S> {
-    /**Returns the values enums*/
-    get enum(): S[keyof S] | undefined
-    /**Returns the enum of a specific value*/
-    getEnum(value: keyof S): S[keyof S]
-    /**Returns all enums*/
-    get getEnums(): S
-    /**Checks if value is in enum list*/
-    checkInEnum(value: keyof S): boolean
 }
 
 export interface StateEnumOptions<T extends StateEnumList> extends StateOptions {
@@ -47,23 +35,7 @@ export interface StateEnumOptions<T extends StateEnumList> extends StateOptions 
  * let stateEnum = new StateEnum('e1', enums); */
 export class StateEnum<T extends StateEnumList> extends State<keyof T | undefined> {
     /**State with a fixed set of values each with meta data
-     * Two usage examples
-     * 
-     * Fixed symbols has typechecking for 
-     * const enums = {
-     *  'e1': { name: 'Enum 1' },
-     *  'e2': { name: 'Enum 2' },
-     * }
-     * It is a good idea to freze the enum
-     * Object.freeze(enums);
-     * let stateEnum = new StateEnum('e1', enums);
-     * 
-     * Dynamic symbols
-     * let enums: StateEnumList = {
-     *  'e1': { name: 'Enum 1' },
-     *  'e2': { name: 'Enum 2' },
-     * }
-     * let stateEnum = new StateEnum('e1', enums);*/
+     * See class for examples */
     constructor(enums: T, init?: keyof T, options?: StateEnumOptions<T>) {
         super(init);
         this.enums = enums;

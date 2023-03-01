@@ -1,30 +1,21 @@
 /// <reference types="cypress" />
-import { StateLimited, StateLimitedLike } from "../../src"
+import { StateLimited } from "../../src"
 
-describe('Initial stateLimiter should not limit initial value', function () {
-    it('Should have an initial value of null', function () {
-        expect((new StateLimited(null, [{ func(val) { return false }, reason: '' }])).get).equal(null);
+describe('Setup', function () {
+    it('Initial value of true', function () {
+        expect((new StateLimited(true)).get).equal(true);
     });
-    it('Should have an initial value of true', function () {
-        expect((new StateLimited(true, [{ func(val) { return false }, reason: '' }])).get).equal(true);
-    });
-    it('Should have an initial value of 1', function () {
-        expect((new StateLimited(1, [{ func(val) { return false }, reason: '' }])).get).equal(1);
-    });
-    it('Should have an initial value of "test"', function () {
-        expect((new StateLimited('test', [{ func(val) { return false }, reason: '' }])).get).equal('test');
-    });
-    it('Should have an initial value type of an object', function () {
-        expect(typeof (new StateLimited<{} | boolean>({}, [{ func(val) { return false }, reason: '' }])).get).equal('object');
-    });
-    it('Should have an initial value type of an array', function () {
-        expect((new StateLimited<[] | boolean>([], [{ func(val) { return false }, reason: '' }])).get).instanceOf(Array);
+    it('Limiters set', function () {
+        let limiters = [{ func(val) { return false }, reason: '' }];
+        let state = new StateLimited(1, { limiters });
+        expect(state.get).equal(1);
+        expect(state.limiters).equal(limiters);
     });
 });
 
-describe('Value limiter', function () {
+describe('Limiter', function () {
     it('Single limiter', function () {
-        let value = new StateLimited(1, [{ func(val) { return val === 10 }, reason: 'Not valid' }]);
+        let value = new StateLimited(1, { limiters: [{ func(val) { return val === 10 }, reason: 'Not valid' }] });
         value.set = 2;
         expect(value.get).equal(2);
         value.set = 10;
@@ -33,7 +24,7 @@ describe('Value limiter', function () {
         expect(value.checkLimitReason(10)).deep.equal({ allowed: false, reason: 'Not valid' });
     });
     it('Multiple limiter', function () {
-        let value = new StateLimited(1, [{ func(val) { return val === 10 }, reason: 'Ten' }, { func(val) { return val === 16 }, reason: 'Sixteen' }]);
+        let value = new StateLimited(1, { limiters: [{ func(val) { return val === 10 }, reason: 'Ten' }, { func(val) { return val === 16 }, reason: 'Sixteen' }] });
         value.set = 3;
         expect(value.get).equal(3);
         value.set = 10;
@@ -44,7 +35,7 @@ describe('Value limiter', function () {
         expect(value.checkLimitReason(16)).deep.equal({ allowed: false, reason: 'Sixteen' });
     });
     it('Correctional value', function () {
-        let value = new StateLimited(1, [{ func(val) { return val === 10 }, reason: 'Ten', correction(val) { return val + 1 } }, { func(val) { return val === 16 }, reason: 'Sixteen', correction(val) { return val + 2 }, }]);
+        let value = new StateLimited(1, { limiters: [{ func(val) { return val === 10 }, reason: 'Ten', correction(val) { return val + 1 } }, { func(val) { return val === 16 }, reason: 'Sixteen', correction(val) { return val + 2 }, }] });
         value.set = 3;
         expect(value.get).equal(3);
         value.set = 10;
@@ -57,10 +48,10 @@ describe('Value limiter', function () {
 });
 
 
-describe('Value with single type must be able to be assignable to parameter with multiple types', function () {
-    it('Value with async getter', function () {
+describe('Other', function () {
+    it('State as a type with multiple generics', function () {
         let value = new StateLimited(10);
-        let func = (val: StateLimitedLike<number | boolean>) => { return val }
+        let func = (val: StateLimited<number | boolean>) => { return val }
         func(value);
     });
 });

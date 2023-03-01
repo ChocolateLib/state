@@ -1,22 +1,10 @@
-import { State, StateInfo, StateLike, StateOptions } from "./state";
+import { State, StateOptions } from "./state";
 
 export interface StateNumberStep {
     /**Size of steps, eg 2 means 2,4,6,8 are allowed*/
     size: number,
     /**Step start, eg with size 1 and start 0.2, 0.2,1.2,2.2 are allowed */
     start?: number,
-}
-
-/**Use this type when you want to have an argument StateLimited with multiple types, this example will only work with the ValueLimitedLike*/
-export interface StateNumberLike extends StateLike<number | undefined> {
-    /**Minimum allowed value */
-    readonly min: number;
-    /**Maximum allowed value */
-    readonly max: number;
-    /**Intended amount of decimals */
-    readonly decimals: number;
-    /**Value step */
-    readonly step: StateNumberStep | undefined;
 }
 
 export interface StateNumberOptions extends StateOptions {
@@ -28,6 +16,14 @@ export interface StateNumberOptions extends StateOptions {
 
 /**State for representing a number with a limited range/precision*/
 export class StateNumber extends State<number | undefined> {
+    /**State for representing a number with a limited range/precision*/
+    constructor(init?: number, options?: StateNumberOptions) {
+        super(init);
+        if (options) {
+            this.options = options;
+        }
+    }
+
     /**Minimum allowed value */
     readonly min: number = -Infinity;
     /**Maximum allowed value */
@@ -36,14 +32,6 @@ export class StateNumber extends State<number | undefined> {
     readonly decimals: number = 0;
     /**Value step */
     readonly step: StateNumberStep | undefined;
-
-    /**State for representing a number with a limited range/precision*/
-    constructor(init?: number, options?: StateNumberOptions) {
-        super(init)
-        if (options) {
-            this.options = options;
-        }
-    }
 
     /** This sets the value and dispatches an event*/
     set set(value: number) {

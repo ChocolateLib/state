@@ -1,10 +1,10 @@
-import { State, StateInfo, StateLike } from "./state";
+import { State, StateOptions } from "./state";
 
 /**Limiter struct */
 export interface StateLimiter<T> {
     /**Limiter function, returns true to block value*/
     func(val: T): boolean,
-    /**Reason for blocking value, can be used for interface*/
+    /**Reason for blocking value, can be used for user interface*/
     reason: string | ((val: T) => string)
     /**Function to provide a correctional value if value is limited
      * eg. values 50-60 are blocked by a limiter, but if the value is set to 53 the value can be corrected to 50 instead of just being set back to its original value*/
@@ -20,28 +20,27 @@ export interface StateLimitCheck<T> {
     correction?: T
 }
 
-/**Use this type when you want to have an argument StateLimited with multiple types, this example will only work with the ValueLimitedLike*/
-export interface StateLimitedLike<T> extends StateLike<T> {
-    checkLimit(val: T): boolean
-    checkLimitReason(val: T): StateLimitCheck<T>
+export interface StateLimitedOptions<T> extends StateOptions {
+    limiters?: StateLimiter<T>[]
 }
 
-/**State with limits */
+/**State with arbritary limits for value */
 export class StateLimited<T> extends State<T> {
-    private _limits: StateLimiter<T>[] | undefined;
+    readonly limiters: StateLimiter<T>[] | undefined;
 
-    /**Constructor
-     * @param init initial value of the Value*/
-    constructor(init: T, limiters?: StateLimiter<T>[], info?: StateInfo) {
-        super(init, info)
-        this._limits = limiters;
+    /**Constructor*/
+    constructor(init: T, options?: StateLimitedOptions<T>) {
+        super(init)
+        if (options) {
+            this.options = options;
+        }
     }
 
     /**Runs through limiters to check if value is allowed returns true if value is allowed*/
     checkLimit(val: T): boolean {
-        if (this._limits) {
-            for (let i = 0; i < this._limits.length; i++) {
-                if (this._limits[i].func(val)) {
+        if (this.limiters) {
+            for (let i = 0; i < this.limiters.length; i++) {
+                if (this.limiters[i].func(val)) {
                     return false;
                 }
             }
@@ -51,9 +50,9 @@ export class StateLimited<T> extends State<T> {
 
     /**Runs through limiters to check if value is allowed*/
     checkLimitReason(val: T): StateLimitCheck<T> {
-        if (this._limits) {
-            for (let i = 0; i < this._limits.length; i++) {
-                let limiter = this._limits[i];
+        if (this.limiters) {
+            for (let i = 0; i < this.limiters.length; i++) {
+                const limiter = this.limiters[i];
                 if (limiter.func(val)) {
                     if (limiter.correction) {
                         switch (typeof limiter.reason) {
@@ -79,5 +78,14 @@ export class StateLimited<T> extends State<T> {
         }
         this._value = val;
         this.update(val);
+    }
+
+    /**Options of state */
+    set options(options: StateLimitedOptions<T>) {
+        if (options.limiters) {
+            //@ts-expect-error
+            this.limiters = options.limiters;
+        }
+        super.options = options;
     }
 }

@@ -85,3 +85,4 @@ describe('Enum setting', function () {
         expect(state.get).equal('e2');
     });
 });
+
