@@ -2,56 +2,56 @@
 import { State } from "../../src"
 
 describe('Initial state', function () {
-    it('Should have an initial state of null', function () {
-        expect((new State(null)).get).equal(null);
+    it('Should have an initial state of null', async function () {
+        expect(await (new State(null))).equal(null);
     });
-    it('Should have an initial state of true', function () {
-        expect((new State(true)).get).equal(true);
+    it('Should have an initial state of true', async function () {
+        expect(await (new State(true))).equal(true);
     });
-    it('Should have an initial state of 1', function () {
-        expect((new State(1)).get).equal(1);
+    it('Should have an initial state of 1', async function () {
+        expect(await (new State(1))).equal(1);
     });
-    it('Should have an initial state of "test"', function () {
-        expect((new State('test')).get).equal('test');
+    it('Should have an initial state of "test"', async function () {
+        expect(await (new State('test'))).equal('test');
     });
-    it('Should have an initial state type of an object', function () {
-        expect(typeof (new State({})).get).equal('object');
+    it('Should have an initial state type of an object', async function () {
+        expect(typeof await (new State({}))).equal('object');
     });
-    it('Should have an initial state type of an array', function () {
-        expect((new State([])).get).instanceOf(Array);
+    it('Should have an initial state type of an array', async function () {
+        expect(await (new State([]))).instanceOf(Array);
     });
 });
 
 describe('Value', function () {
-    it('Setting/Getting true', function () {
+    it('Setting/Getting true', async function () {
         let state = new State(false);
-        expect(state.get).equal(false);
+        expect(await state).equal(false);
         state.set = true;
-        expect(state.get).equal(true);
+        expect(await state).equal(true);
     });
-    it('Setting/Getting 1', function () {
+    it('Setting/Getting 1', async function () {
         let state = new State(0);
-        expect(state.get).equal(0);
+        expect(await state).equal(0);
         state.set = 1;
-        expect(state.get).equal(1);
+        expect(await state).equal(1);
     });
-    it('Setting/Getting "test"', function () {
+    it('Setting/Getting "test"', async function () {
         let state = new State('');
-        expect(state.get).equal('');
+        expect(await state).equal('');
         state.set = 'test';
-        expect(state.get).equal('test');
+        expect(await state).equal('test');
     });
-    it('Setting/Getting an object', function () {
+    it('Setting/Getting an object', async function () {
         let state = new State<number | {}>(0);
-        expect(state.get).equal(0);
+        expect(await state).equal(0);
         state.set = {};
-        expect(typeof state.get).equal('object');
+        expect(typeof await state).equal('object');
     });
-    it('Setting/Getting an array', function () {
+    it('Setting/Getting an array', async function () {
         let state = new State<number | {}>(0);
-        expect(state.get).equal(0);
+        expect(await state).equal(0);
         state.set = [];
-        expect(state.get).instanceOf(Array);
+        expect(await state).instanceOf(Array);
     });
 
     it('Add one subscribers correctly', function () {
@@ -255,24 +255,6 @@ describe('Options', function () {
 });
 
 describe('Other', function () {
-    it('Compare same type', function () {
-        let state = new State(10);
-        expect(state.compare(10)).equal(false);
-        expect(state.compare(11)).equal(true);
-    });
-    it('Compare different type', function () {
-        let state = new State(10);
-        expect(state.compare('10')).equal(true);
-        expect(state.compare('11')).equal(true);
-    });
-    it('JSON override', function () {
-        let state = new State(10);
-        expect(JSON.stringify(state)).equal('10');
-    });
-    it('Awaiting state', async function () {
-        let state = new State(10);
-        expect(await state).equal(10);
-    });
     it('State as a type with multiple generics', function () {
         let state = new State(10);
         let func = (val: State<number | boolean>) => { return val }

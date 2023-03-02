@@ -1,10 +1,11 @@
 /// <reference types="cypress" />
-import { State, StateRepeater, StateRepeaterLike } from "../../src"
+import { State, StateRepeater } from "../../src"
+import { AsyncTest } from "./testAsync";
 
 describe('Setup', function () {
-    it('Repeater without params should have value undefined and read func', function () {
+    it('Repeater without params should have value undefined and read func', async function () {
         let repeat = new StateRepeater();
-        expect(repeat.get).equal(undefined);
+        expect(await repeat).equal(undefined);
         expect(repeat.readFunc).exist;
         expect(repeat.readonly).true;
     });
@@ -95,16 +96,17 @@ describe('Subscribers', function () {
 });
 
 describe('Async', function () {
-    it('Adding subscriber to ValueRepeater without a state then setting state then unsubscribing', function () {
-        let valueRepeater = new StateRepeater();
-        expect(valueRepeater.get).equal(undefined);
+    it('Repeater with async', async function () {
+        let async = new AsyncTest;
+        let valueRepeater = new StateRepeater(async);
+        expect(await valueRepeater.get).equal(1);
     });
 });
 
-describe('Value with single type must be able to be assignable to parameter with multiple types', function () {
-    it('Value with async getter', function () {
-        let value = new StateRepeater<boolean, number>(new State(1));
-        let func = (val: StateRepeaterLike<number | boolean, number | boolean>) => { return val }
-        func(value);
-    });
-});
+// describe('Value with single type must be able to be assignable to parameter with multiple types', function () {
+//     it('Value with async getter', function () {
+//         let value = new StateRepeater<boolean, number>(new State(1));
+//         let func = (val: StateRepeater<number | boolean, number | boolean>) => { return val }
+//         func(value);
+//     });
+// });

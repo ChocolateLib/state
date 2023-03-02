@@ -2,47 +2,47 @@
 import { StateLimited } from "../../src"
 
 describe('Setup', function () {
-    it('Initial value of true', function () {
-        expect((new StateLimited(true)).get).equal(true);
+    it('Initial value of true', async function () {
+        expect(await (new StateLimited(true))).equal(true);
     });
-    it('Limiters set', function () {
+    it('Limiters set', async function () {
         let limiters = [{ func(val) { return false }, reason: '' }];
         let state = new StateLimited(1, { limiters });
-        expect(state.get).equal(1);
+        expect(await state).equal(1);
         expect(state.limiters).equal(limiters);
     });
 });
 
 describe('Limiter', function () {
-    it('Single limiter', function () {
+    it('Single limiter', async function () {
         let value = new StateLimited(1, { limiters: [{ func(val) { return val === 10 }, reason: 'Not valid' }] });
         value.set = 2;
-        expect(value.get).equal(2);
+        expect(await value).equal(2);
         value.set = 10;
-        expect(value.get).equal(2);
+        expect(await value).equal(2);
         expect(value.checkLimitReason(8)).deep.equal({ allowed: true, reason: '' });
         expect(value.checkLimitReason(10)).deep.equal({ allowed: false, reason: 'Not valid' });
     });
-    it('Multiple limiter', function () {
+    it('Multiple limiter', async function () {
         let value = new StateLimited(1, { limiters: [{ func(val) { return val === 10 }, reason: 'Ten' }, { func(val) { return val === 16 }, reason: 'Sixteen' }] });
         value.set = 3;
-        expect(value.get).equal(3);
+        expect(await value).equal(3);
         value.set = 10;
-        expect(value.get).equal(3);
+        expect(await value).equal(3);
         expect(value.checkLimitReason(10)).deep.equal({ allowed: false, reason: 'Ten' });
         value.set = 16;
-        expect(value.get).equal(3);
+        expect(await value).equal(3);
         expect(value.checkLimitReason(16)).deep.equal({ allowed: false, reason: 'Sixteen' });
     });
-    it('Correctional value', function () {
+    it('Correctional value', async function () {
         let value = new StateLimited(1, { limiters: [{ func(val) { return val === 10 }, reason: 'Ten', correction(val) { return val + 1 } }, { func(val) { return val === 16 }, reason: 'Sixteen', correction(val) { return val + 2 }, }] });
         value.set = 3;
-        expect(value.get).equal(3);
+        expect(await value).equal(3);
         value.set = 10;
-        expect(value.get).equal(3);
+        expect(await value).equal(3);
         expect(value.checkLimitReason(10)).deep.equal({ allowed: false, reason: 'Ten', correction: 11 });
         value.set = 16;
-        expect(value.get).equal(3);
+        expect(await value).equal(3);
         expect(value.checkLimitReason(16)).deep.equal({ allowed: false, reason: 'Sixteen', correction: 18 });
     });
 });

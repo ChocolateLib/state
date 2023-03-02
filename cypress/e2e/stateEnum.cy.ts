@@ -6,19 +6,19 @@ describe('Defining state enum', function () {
         const enums = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         new StateEnum(enums);
     });
-    it('Enum can be initialized with a fixed selection with initial value', function () {
+    it('Enum can be initialized with a fixed selection with initial value', async function () {
         const enums = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         let state = new StateEnum(enums, 'e1');
-        expect(state.get).equal('e1');
+        expect(await state).equal('e1');
     });
     it('Enum can be initialized with a dynamic selection and without initial value', function () {
         let enums: StateEnumList = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         new StateEnum(enums);
     });
-    it('Enum can be initialized with a fixed selection with initial value', function () {
+    it('Enum can be initialized with a fixed selection with initial value', async function () {
         let enums: StateEnumList = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         let state = new StateEnum(enums, 'e1');
-        expect(state.get).equal('e1');
+        expect(await state).equal('e1');
     });
 });
 
@@ -74,15 +74,15 @@ describe('Enum Check', function () {
 });
 
 describe('Enum setting', function () {
-    it('When setting enum value it will only allow valid selections', function () {
+    it('When setting enum value it will only allow valid selections', async function () {
         let enums: StateEnumList = { 'e1': { name: 'Enum 1' }, 'e2': { name: 'Enum 2' }, }
         let state = new StateEnum(enums);
         state.set = 'e1';
-        expect(state.get).equal('e1');
+        expect(await state).equal('e1');
         state.set = 'e3';
-        expect(state.get).equal('e1');
+        expect(await state).equal('e1');
         state.set = 'e2';
-        expect(state.get).equal('e2');
+        expect(await state).equal('e2');
     });
 });
 

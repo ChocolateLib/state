@@ -33,27 +33,12 @@ export class State<T> {
     /**Returns if the state is read only*/
     readonly readonly: boolean = false;
 
-    /**Returns state value to json stringifier, since it is not async if the state value is async it can only return undefined*/
-    toJSON(): T | undefined {
-        const value = <Promise<T>>this.get;
-        if (typeof value?.then === 'function') {
-            return undefined;
-        } else {
-            return <T>value;
-        }
-    }
-
     /**     __      __   _            
      *     \ \    / /  | |           
      *      \ \  / /_ _| |_   _  ___ 
      *       \ \/ / _` | | | | |/ _ \
      *        \  / (_| | | |_| |  __/
      *         \/ \__,_|_|\__,_|\___| */
-
-    /** This gets the current value of the state*/
-    get get(): T | Promise<T> {
-        return this._value;
-    }
 
     /** This sets the value of the state and updates all subscribers*/
     set set(val: T) {
@@ -66,6 +51,11 @@ export class State<T> {
     /** This sets the value of the state*/
     set setSilent(val: T) {
         this._value = val;
+    }
+
+    /**Adds compatability with promise */
+    then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
+        return new Promise((a) => { a(onfulfilled(this._value)) });
     }
 
     /**This adds a function as a subscriber to the state
@@ -113,25 +103,6 @@ export class State<T> {
         }
     }
 
-    /**Adds compatability with promise */
-    then(func: StateSubscriber<T>): void {
-        const value = <Promise<T>>this.get;
-        if (typeof value?.then === 'function') {
-            value.then(func);
-        } else {
-            func(<T>value);
-        }
-    }
-
-    /** This method compares any value the states value, returns true if they are different*/
-    compare(val: any): boolean | Promise<boolean> {
-        const value = <Promise<T>>this.get;
-        if (typeof value?.then === 'function') {
-            return value.then((value) => { return val !== value });
-        } else {
-            return val !== value;
-        }
-    }
     /** Returns wether the state has subscribers, true means it has at least one subscriber*/
     get inUse(): boolean {
         return this._subscribers.length !== 0;

@@ -71,9 +71,10 @@ export class StateRepeater<T, I> extends State<T | undefined> {
      *        \  / (_| | | |_| |  __/
      *         \/ \__,_|_|\__,_|\___| */
 
-    /**This gets the value from the proxied value*/
-    get get(): T | Promise<T> | undefined {
+    /**Adds compatability with promise */
+    then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
         if (this._state) {
+            return new Promise((a) => { a(onfulfilled(this._value)) });
             if (this._valid) {
                 return this._value;
             }

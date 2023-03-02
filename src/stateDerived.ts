@@ -17,7 +17,9 @@ export class StateDerived<T, I> extends State<T | undefined> {
     protected _needOld: boolean = false;
     protected _hasValue: boolean = false;
     protected _gettingValue: boolean = false;
+
     protected _promises: StateSubscriber<any>[] = [];
+    protected _rejects: StateSubscriber<any>[] = [];
 
     readonly readFunc: (val: I[]) => T;
     readonly writeFunc: WriteFunc<T, I> | undefined;
@@ -55,20 +57,25 @@ export class StateDerived<T, I> extends State<T | undefined> {
         if (this._hasValue) {
             return this._value;
         }
-        if (!this._async) {
-            for (let i = 0; i < this._states.length; i++) {
-                this._stateBuffers[i] = <I>this._states[i].get;
+        for (let i = 0; i < this._states.length; i++) {
+            const value = <Promise<I>>this._states[i].get;
+            if (typeof value?.then === 'function') {
+                return new Promise(async (a, b) => {
+                    try {
+                        let values = await Promise.all(this._states.slice(i))
+                        for (let y = 0; y < values.length; y++) {
+                            this._stateBuffers[i + y] = values[y];
+                        }
+                        a(this.readFunc(this._stateBuffers));
+                    } catch (error) {
+                        b(error);
+                    }
+                })
+            } else {
+                this._stateBuffers[i] = <I>value;
             }
-            return this.readFunc(this._stateBuffers);
         }
-        return new Promise(async (a) => {
-            this._promises.push(a);
-            if (!this._gettingValue) {
-                this._gettingValue = true;
-                this._promises.push(() => { this._gettingValue = false; });
-                this._setasync = await Promise.all(this._states);
-            }
-        })
+        return this.readFunc(this._stateBuffers);
     }
 
     /**This sets the value and dispatches an event*/
@@ -82,25 +89,25 @@ export class StateDerived<T, I> extends State<T | undefined> {
             }
             return
         }
-        if (!this._async) {
-            for (let i = 0; i < this._states.length; i++) {
-                this._stateBuffers[i] = <I>this._states[i].get;
-            }
-            const values: I[] = Array(this._states.length);
-            this.writeFunc(value, values, this._stateBuffers, <T>this.readFunc(this._stateBuffers));
-            for (let i = 0; i < this._states.length; i++) {
-                this._states[i].set = values[i];
-            }
-            return;
-        }
-        (async () => {
-            const oldValue = await this.get;
-            const values: I[] = Array(this._states.length);
-            (<WriteFunc<T, I>>this.writeFunc)(value, values, this._stateBuffers, <T>oldValue);
-            for (let i = 0; i < this._states.length; i++) {
-                this._states[i].set = values[i];
-            }
-        })()
+        // if (!this._async) {
+        //     for (let i = 0; i < this._states.length; i++) {
+        //         this._stateBuffers[i] = <I>this._states[i].get;
+        //     }
+        //     const values: I[] = Array(this._states.length);
+        //     this.writeFunc(value, values, this._stateBuffers, <T>this.readFunc(this._stateBuffers));
+        //     for (let i = 0; i < this._states.length; i++) {
+        //         this._states[i].set = values[i];
+        //     }
+        //     return;
+        // }
+        // (async () => {
+        //     const oldValue = await this.get;
+        //     const values: I[] = Array(this._states.length);
+        //     (<WriteFunc<T, I>>this.writeFunc)(value, values, this._stateBuffers, <T>oldValue);
+        //     for (let i = 0; i < this._states.length; i++) {
+        //         this._states[i].set = values[i];
+        //     }
+        // })()
     }
 
     protected set _setasync(values: I[]) {

@@ -1,6 +1,8 @@
 Fix them yo
+export * from "./stateArray";
 export * from "./stateAsync";
 export * from "./stateDerived";
-export * from "./stateObject"; -- Write Tests
-export * from "./stateRepeater"; --Async Tests
+export * from "./stateLimited"; -Multi Type
+export * from "./stateObject";
+export * from "./stateRepeater";
 export * from "./stateTypes";

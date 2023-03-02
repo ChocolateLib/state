@@ -1,4 +1,4 @@
-import { State, StateSubscriber } from "./state"
+import { State, StateOptions, StateSubscriber } from "./state"
 
 type AsyncFunc<T> = (state: StateAsync<T>) => void;
 type AsyncFuncSet<T> = (value: T, state: StateAsync<T>) => void;
@@ -11,13 +11,17 @@ export class StateAsync<T> extends State<T> {
     protected _singleSet: ((value: T, state: this) => void) | undefined
     protected _hasValue: boolean = false;
     protected _promises: StateSubscriber<any>[] = [];
+    protected _rejects: ((val: Error) => void)[] = [];
 
-    constructor(setup: AsyncFunc<T>, teardown: AsyncFunc<T>, singleGet: AsyncFunc<T>, singleSet?: AsyncFuncSet<T>) {
+    constructor(setup: AsyncFunc<T>, teardown: AsyncFunc<T>, singleGet: AsyncFunc<T>, singleSet?: AsyncFuncSet<T>, options?: StateOptions) {
         super(<T>undefined);
         this._setup = setup;
         this._teardown = teardown;
         this._singleGet = singleGet;
         this._singleSet = singleSet;
+        if (options) {
+            this.options = options;
+        }
     }
 
     /**This adds a function as a subscriber to the state
@@ -47,21 +51,15 @@ export class StateAsync<T> extends State<T> {
         return func;
     }
 
-    /**Setter for updating value with async data*/
-    set setAsync(val: T) {
-        for (let i = 0; i < this._promises.length; i++) {
-            this._promises[i](val);
-        }
-        this._promises = [];
-        super.set = val;
-    }
-
     /** This gets the current value of the state*/
     get get(): T | Promise<T> {
         if (this._hasValue) {
             return this._value;
         } else {
-            const prom = new Promise<T>((a) => { this._promises.push(a); });
+            const prom = new Promise<T>((a, b) => {
+                this._promises.push(a);
+                this._rejects.push(b);
+            });
             this._singleGet(this);
             return prom;
         }
@@ -86,13 +84,64 @@ export class StateAsync<T> extends State<T> {
         }
     }
 
+    /**Setter for updating value with async data*/
+    set asyncFulfill(val: T) {
+        for (let i = 0; i < this._promises.length; i++) {
+            this._promises[i](val);
+        }
+        this._promises = [];
+        this._rejects = [];
+        super.set = val;
+    }
+
+    /**Setter for updating value with async data*/
+    set asyncReject(error: Error) {
+        for (let i = 0; i < this._rejects.length; i++) {
+            this._rejects[i](error);
+        }
+        this._promises = [];
+        this._rejects = [];
+    }
+
+    // /**Adds compatability with promise */
+    // then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
+    //     const value = <PromiseLike<T>>this.get;
+    //     if (typeof value?.then === 'function') {
+    //         return value.then(onfulfilled, onrejected);
+    //     } else {
+    //         return new Promise((a) => {
+    //             a(onfulfilled(<T>value))
+    //         });
+    //     }
+    // }
+
     /**Adds compatability with promise */
-    then(func: StateSubscriber<T>): void {
+    then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
+        console.warn('YOYOYO1');
         if (this._hasValue) {
-            func(this._value);
+            console.warn('YOYOYO2');
+            return new Promise((a) => { a(onfulfilled(<T>this._value)) });
         } else {
-            this._promises.push(func);
-            this._singleGet(this);
+            console.warn('YOYOYO3');
+            return new Promise((a, b) => {
+                this._promises.push((val) => {
+                    try {
+                        a(onfulfilled(val))
+                    } catch (error) {
+                        b(error)
+                    }
+                });
+                if (onrejected) {
+                    this._rejects.push((val) => {
+                        try {
+                            a(onrejected(val))
+                        } catch (error) {
+                            b(error)
+                        }
+                    });
+                }
+                this._singleGet(this);
+            });
         }
     }
 
