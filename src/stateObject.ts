@@ -42,6 +42,10 @@ export class StateObject<T extends {}> extends State<T> {
         }
     }
 
+    *[Symbol.iterator]() {
+
+    }
+
     /** This sets the value and dispatches an event*/
     set set(value: T) {
         if (this._value !== value) {

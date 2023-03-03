@@ -8,7 +8,6 @@ export interface StateRepeaterOptions {
  * @param T type of repeater value 
  * @param I type of repeated state value*/
 export class StateRepeater<T, I> extends State<T | undefined> {
-    private _valid: boolean = false;
     private _state: State<I> | undefined;
     private _subscriber: StateSubscriber<I> | undefined;
 
@@ -40,7 +39,6 @@ export class StateRepeater<T, I> extends State<T | undefined> {
             if (this._subscriber) {
                 this._state.unsubscribe(this._subscriber);
             }
-            this._valid = false;
             this._subscriber = undefined;
             if (!state) {
                 this._state = undefined;
@@ -49,13 +47,7 @@ export class StateRepeater<T, I> extends State<T | undefined> {
         }
         if (state) {
             if (this._subscribers.length) {
-                this._subscriber = state.subscribe((value) => {
-                    super.set = this.readFunc(value);
-                });
-                state.then((value) => {
-                    this._valid = true;
-                    super.set = this.readFunc(value);
-                });
+                this._subscriber = state.subscribe((value) => { super.set = this.readFunc(value); }, true);
             }
             this._state = state;
         }
@@ -72,22 +64,14 @@ export class StateRepeater<T, I> extends State<T | undefined> {
      *         \/ \__,_|_|\__,_|\___| */
 
     /**Adds compatability with promise */
-    then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
+    then<TResult1 = T | undefined, TResult2 = never>(onfulfilled: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
         if (this._state) {
-            return new Promise((a) => { a(onfulfilled(this._value)) });
-            if (this._valid) {
-                return this._value;
-            }
-            const value = <Promise<I>>this._state.get;
-            if (typeof value?.then === 'function') {
-                return value.then((val) => {
-                    return this.readFunc(val);
-                });
-            } else {
-                return this.readFunc(<I>value);
-            }
+            return this._state.then((val) => {
+
+                onfulfilled(this.readFunc(val))
+            });
         }
-        return undefined;
+        return new Promise((a) => { a(onfulfilled(undefined)) });
     }
 
     /**This sets the value of the proxied value*/
@@ -108,14 +92,7 @@ export class StateRepeater<T, I> extends State<T | undefined> {
      * @param update set true to update subscriber*/
     subscribe<B = T>(func: StateSubscriber<B>, update?: boolean): typeof func {
         if (this._state && !this._subscriber) {
-            this._valid = false;
-            this._subscriber = this._state.subscribe((value) => {
-                super.set = this.readFunc(value);
-            });
-            this._state.then((value) => {
-                this._valid = true
-                super.set = this.readFunc(value);
-            })
+            this._subscriber = this._state.subscribe((value) => { super.set = this.readFunc(value); }, update);
         }
         return super.subscribe(func, update);
     }
@@ -123,7 +100,6 @@ export class StateRepeater<T, I> extends State<T | undefined> {
     /**This removes a function as a subscriber to the state*/
     unsubscribe<B = T>(func: StateSubscriber<B>): typeof func {
         if (this._subscribers.length === 1 && this._subscriber && this._state) {
-            this._valid = false;
             this._state.unsubscribe(this._subscriber);
             this._subscriber = undefined;
         }

@@ -25,6 +25,10 @@ export class StateArray<T> extends State<T[]> {
         }
     }
 
+    *[Symbol.iterator]() {
+
+    }
+
     /**This adds a function as a subscriber to the state*/
     subscribeArray<B = T>(func: StateArraySubscriber<B>): typeof func {
         this._arraySubscribers.push(func);
