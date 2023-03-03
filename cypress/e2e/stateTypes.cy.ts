@@ -22,14 +22,14 @@ describe('Averaging Value', function () {
     });
 
     describe('Getting value', function () {
-        it('Getting value from ValueAverage with no Values', function () {
+        it('Getting value from ValueAverage with no Values', async function () {
             let multi = new StateAverage();
-            expect(multi.get).equal(undefined);
+            expect(await multi).equal(undefined);
         });
-        it('Getting value from ValueAverage with Value but without setting a function just returns the value of the first Value', function () {
+        it('Getting value from ValueAverage with Value but without setting a function just returns the value of the first Value', async function () {
             let val = 1;
             let multi = new StateAverage([new State(val), new State(99)]);
-            expect(multi.get).equal(50);
+            expect(await multi).equal(50);
         });
     });
 
@@ -38,13 +38,14 @@ describe('Averaging Value', function () {
             let multi = new StateAverage();
             multi.set = 10;
         });
-        it('Setting value on ValueAverage', function () {
+        it('Setting value on ValueAverage', async function () {
             let value1 = new State(1);
             let value2 = new State(2);
             let multi = new StateAverage([value1, value2]);
             multi.set = 10;
-            expect(value1.get).equal(9.5);
-            expect(value2.get).equal(10.5);
+            await new Promise((a) => { setTimeout(a, 10) });
+            expect(await value1).equal(9.5);
+            expect(await value2).equal(10.5);
         });
     });
 
@@ -83,14 +84,14 @@ describe('Summing Value', function () {
     });
 
     describe('Getting value', function () {
-        it('Getting value from ValueSummer with no Values', function () {
+        it('Getting value from ValueSummer with no Values', async function () {
             let multi = new StateSummer();
-            expect(multi.get).equal(undefined);
+            expect(await multi).equal(undefined);
         });
-        it('Getting value from ValueSummer', function () {
+        it('Getting value from ValueSummer', async function () {
             let val = 1;
             let multi = new StateSummer([new State(val), new State(99)]);
-            expect(multi.get).equal(100);
+            expect(await multi).equal(100);
         });
     });
 
@@ -99,13 +100,14 @@ describe('Summing Value', function () {
             let multi = new StateSummer();
             multi.set = 10;
         });
-        it('Setting value on ValueSummer', function () {
+        it('Setting value on ValueSummer', async function () {
             let value1 = new State(1);
             let value2 = new State(2);
             let multi = new StateSummer([value1, value2]);
             multi.set = 10;
-            expect(value1.get).equal(4.5);
-            expect(value2.get).equal(5.5);
+            await new Promise((a) => { setTimeout(a, 10) });
+            expect(await value1).equal(4.5);
+            expect(await value2).equal(5.5);
         });
     });
 

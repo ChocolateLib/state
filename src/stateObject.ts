@@ -42,8 +42,11 @@ export class StateObject<T extends {}> extends State<T> {
         }
     }
 
+    /** Support for iterator */
     *[Symbol.iterator]() {
-
+        for (const key in this._value) {
+            yield this._value[key];
+        }
     }
 
     /** This sets the value and dispatches an event*/

@@ -1,7 +1,8 @@
 import { StateSubscriber, State, StateInfo } from "./state";
 
-export interface StateRepeaterOptions {
+export interface StateRepeaterOptions<T> {
     info?: StateInfo
+    placeholder?: T
 }
 
 /**State repeater
@@ -15,7 +16,7 @@ export class StateRepeater<T, I> extends State<T | undefined> {
      * @param state state to repeat value from
      * @param readFunc mapper function to change original value for users of the proxy
      * @param writeFunc mapper function to change values set on the proxy before relaying them to the original*/
-    constructor(state?: State<I>, readFunc: (val: I) => T = (val: I) => { return <T><any>val; }, writeFunc?: (val: T) => I, options?: StateRepeaterOptions) {
+    constructor(state?: State<I>, readFunc: (val: I) => T = (val: I) => { return <T><any>val; }, writeFunc?: (val: T) => I, options?: StateRepeaterOptions<T>) {
         super(undefined);
         this._state = state;
         this.readFunc = readFunc;
@@ -26,6 +27,9 @@ export class StateRepeater<T, I> extends State<T | undefined> {
             this.options = options;
         }
     }
+
+    /**Placeholder value used when note state is provided*/
+    readonly placeholder: T | undefined;
 
     /**Function used to transform value read from repeated state*/
     readonly readFunc: (val: I) => T;
@@ -42,7 +46,7 @@ export class StateRepeater<T, I> extends State<T | undefined> {
             this._subscriber = undefined;
             if (!state) {
                 this._state = undefined;
-                super.set = undefined;
+                super.set = this.placeholder;
             }
         }
         if (state) {
@@ -65,13 +69,10 @@ export class StateRepeater<T, I> extends State<T | undefined> {
 
     /**Adds compatability with promise */
     then<TResult1 = T | undefined, TResult2 = never>(onfulfilled: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
-        if (this._state) {
-            return this._state.then((val) => {
-
-                onfulfilled(this.readFunc(val))
-            });
+        if (!this._state) {
+            return new Promise((a) => { a(onfulfilled(this.placeholder)) });
         }
-        return new Promise((a) => { a(onfulfilled(undefined)) });
+        return this._state.then((val) => { return onfulfilled(this.readFunc(val)) }, onrejected);
     }
 
     /**This sets the value of the proxied value*/
@@ -107,10 +108,17 @@ export class StateRepeater<T, I> extends State<T | undefined> {
     }
 
     /**Options of state */
-    set options(options: StateRepeaterOptions) {
+    set options(options: StateRepeaterOptions<T>) {
         if (options.info) {
             //@ts-expect-error
             this.info = options.info;
+        }
+        if ('placeholder' in options) {
+            //@ts-expect-error
+            this.placeholder = options.placeholder;
+            if (this._state && this.inUse) {
+                this.update(this.placeholder);
+            }
         }
         this._updateOptions();
     }

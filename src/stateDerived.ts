@@ -13,13 +13,8 @@ export class StateDerived<T, I> extends State<T | undefined> {
     protected _states: State<I>[];
     protected _stateBuffers: I[] = [];
     protected _stateSubscribers: StateSubscriber<I>[] = [];
-
-    protected _needOld: boolean = false;
-    protected _hasValue: boolean = false;
+    protected _needOld: boolean;
     protected _gettingValue: boolean = false;
-
-    protected _promises: StateSubscriber<any>[] = [];
-    protected _rejects: StateSubscriber<any>[] = [];
 
     readonly readFunc: (val: I[]) => T;
     readonly writeFunc: WriteFunc<T, I> | undefined;
@@ -29,16 +24,19 @@ export class StateDerived<T, I> extends State<T | undefined> {
      * @param readFunc function to use for deriving values
      * @param writeFunc function used to reverse derive
      * @param needOld set true if the write function need the old value to work*/
-    constructor(readFunc: (values: I[]) => T, states: State<I>[] = [], writeFunc?: WriteFunc<T, I>, needOld: boolean = false, options?: StateDerivedOptions) {
+    constructor(readFunc: (values: I[]) => T, states: State<I>[] = [], writeFunc?: WriteFunc<T, I>, options?: StateDerivedOptions) {
         super(undefined);
         this._states = [...states];
         this.readFunc = readFunc;
         this.writeFunc = writeFunc;
-        this._needOld = needOld;
+        this._needOld = writeFunc?.length === 4;
         if (options) {
             this.options = options;
         }
     }
+
+    /**Placeholder value used when note states are not provided*/
+    readonly placeholder: T | undefined;
 
     /**Sets the states to derive from*/
     set states(states: State<I>[]) {
@@ -51,97 +49,58 @@ export class StateDerived<T, I> extends State<T | undefined> {
         }
     }
 
-    /**This get the current value */
-    get get(): T | Promise<T | undefined> | undefined {
-        if (this._states.length === 0) { return undefined }
-        if (this._hasValue) {
-            return this._value;
+    /**Adds compatability with promise */
+    then<TResult1 = T | undefined, TResult2 = never>(onfulfilled: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
+        if (this._states.length === 0) {
+            return new Promise((a) => { a(onfulfilled(this.placeholder)) });
         }
-        for (let i = 0; i < this._states.length; i++) {
-            const value = <Promise<I>>this._states[i].get;
-            if (typeof value?.then === 'function') {
-                return new Promise(async (a, b) => {
-                    try {
-                        let values = await Promise.all(this._states.slice(i))
-                        for (let y = 0; y < values.length; y++) {
-                            this._stateBuffers[i + y] = values[y];
-                        }
-                        a(this.readFunc(this._stateBuffers));
-                    } catch (error) {
-                        b(error);
-                    }
-                })
-            } else {
-                this._stateBuffers[i] = <I>value;
-            }
-        }
-        return this.readFunc(this._stateBuffers);
+        return Promise.all(this._states).then((val) => {
+            this._stateBuffers = val;
+            return onfulfilled(this.readFunc(val))
+        }, onrejected);
     }
 
     /**This sets the value and dispatches an event*/
     set set(value: T) {
-        if (this._states.length === 0 || !this.writeFunc) { return; }
-        if (this._hasValue || !this._needOld) {
-            const values: I[] = Array(this._states.length);
-            this.writeFunc(value, values, this._stateBuffers, <T>this._value);
-            for (let i = 0; i < this._states.length; i++) {
-                this._states[i].set = values[i];
+        if (this._states.length === 0) {
+            return;
+        }
+        if (this._needOld) {
+            this.then((oldValue) => {
+                if (this.writeFunc) {
+                    const values: I[] = Array(this._states.length);
+                    this.writeFunc(value, values, this._stateBuffers, oldValue);
+                    for (let i = 0; i < this._states.length; i++) {
+                        this._states[i].set = values[i];
+                    }
+                }
+            })
+        } else {
+            if (this.writeFunc) {
+                const values: I[] = Array(this._states.length);
+                this.writeFunc(value, values, this._stateBuffers);
+                for (let i = 0; i < this._states.length; i++) {
+                    this._states[i].set = values[i];
+                }
             }
-            return
         }
-        // if (!this._async) {
-        //     for (let i = 0; i < this._states.length; i++) {
-        //         this._stateBuffers[i] = <I>this._states[i].get;
-        //     }
-        //     const values: I[] = Array(this._states.length);
-        //     this.writeFunc(value, values, this._stateBuffers, <T>this.readFunc(this._stateBuffers));
-        //     for (let i = 0; i < this._states.length; i++) {
-        //         this._states[i].set = values[i];
-        //     }
-        //     return;
-        // }
-        // (async () => {
-        //     const oldValue = await this.get;
-        //     const values: I[] = Array(this._states.length);
-        //     (<WriteFunc<T, I>>this.writeFunc)(value, values, this._stateBuffers, <T>oldValue);
-        //     for (let i = 0; i < this._states.length; i++) {
-        //         this._states[i].set = values[i];
-        //     }
-        // })()
-    }
-
-    protected set _setasync(values: I[]) {
-        this._value = this.readFunc(values);
-        for (let i = 0; i < this._promises.length; i++) {
-            this._promises[i](this._value);
-        }
-        this._promises = [];
-        this.update(this._value);
     }
 
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
     subscribe<B = T>(func: StateSubscriber<B>, update?: boolean): typeof func {
-        this._subscribers.push(func);
-        if (update) {
-            this._promises.push(func);
-        }
-        if (this._subscribers.length === 1) {
+        if (this._subscribers.length === 0) {
             this._connect();
         }
-        return func;
+        return super.subscribe(func, update);
     }
 
     /**This removes a function as a subscriber to the state*/
     unsubscribe<B = T>(func: StateSubscriber<B>): typeof func {
-        const index = this._subscribers.indexOf(func);
-        if (index != -1) {
-            this._subscribers.splice(index, 1);
-        }
-        if (this._subscribers.length === 0) {
+        if (this._subscribers.length === 1) {
             this._disconnect();
         }
-        return func;
+        return super.unsubscribe(func);
     }
 
     /**Connects listeners to all values*/
@@ -153,7 +112,7 @@ export class StateDerived<T, I> extends State<T | undefined> {
                     this._gettingValue = true;
                     (async () => {
                         await undefined;
-                        this._setasync = this._stateBuffers;
+                        super.set = this.readFunc(this._stateBuffers);
                         this._gettingValue = false;
                     })();
                 }
@@ -174,6 +133,13 @@ export class StateDerived<T, I> extends State<T | undefined> {
         if (options.info) {
             //@ts-expect-error
             this.info = options.info;
+        }
+        if ('placeholder' in options) {
+            //@ts-expect-error
+            this.placeholder = options.placeholder;
+            if (this._states.length && this.inUse) {
+                this.update(this.placeholder);
+            }
         }
         this._updateOptions();
     }

@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { State, StateDerived, StateDerivedLike } from "../../src"
+import { State, StateDerived } from "../../src"
 
 describe('Initial value', function () {
     it('Can be initialized with just read function', function () {
@@ -17,13 +17,13 @@ describe('Initial value', function () {
 });
 
 describe('Getting value', function () {
-    it('Getting value from ValueMulti with no Values', function () {
+    it('Getting value from ValueMulti with no Values', async function () {
         let multi = new StateDerived(() => { });
-        expect(multi.get).equal(undefined);
+        expect(await multi).equal(undefined);
     });
-    it('Getting value from ValueMulti with Value with read function set', function () {
+    it('Getting value from ValueMulti with Value with read function set', async function () {
         let multi = new StateDerived(([a, b]) => { return a * b }, [new State(5), new State(5)],);
-        expect(multi.get).equal(25);
+        expect(await multi).equal(25);
     });
 });
 
@@ -32,7 +32,7 @@ describe('Setting value', function () {
         let multi = new StateDerived<any, any>(() => { });
         multi.set = 10;
     });
-    it('Setting value from ValueMulti with Value with write function set', function () {
+    it('Setting value from ValueMulti with Value with write function set', async function () {
         let val1 = new State(5);
         let val2 = new State(5);
         let multi = new StateDerived<number, number>(() => { return 0 }, [val1, val2], (a, b, c) => {
@@ -40,8 +40,8 @@ describe('Setting value', function () {
             b[1] = a * 10;
         });
         multi.set = 3;
-        expect(val1.get).equal(60);
-        expect(val2.get).equal(30);
+        expect(await val1).equal(60);
+        expect(await val2).equal(30);
     });
 });
 
@@ -77,12 +77,12 @@ describe('Listeners', function () {
 });
 
 describe('Error Angles', function () {
-    it('If an array is passed to the ValueMulti, and the array is modified, the ValueMulti shall not be affected', function () {
+    it('If an array is passed to the ValueMulti, and the array is modified, the ValueMulti shall not be affected', async function () {
         let values = [new State(1), new State(2), new State(3)];
         let multi = new StateDerived((values) => { return values[0] }, values);
-        expect(multi.get).equal(1);
+        expect(await multi).equal(1);
         values.unshift(new State(4));
-        expect(multi.get).equal(1);
+        expect(await multi).equal(1);
     });
 });
 

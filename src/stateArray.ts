@@ -26,7 +26,9 @@ export class StateArray<T> extends State<T[]> {
     }
 
     *[Symbol.iterator]() {
-
+        for (let i = 0; i < this._value.length; i++) {
+            yield this._value[i]
+        }
     }
 
     /**This adds a function as a subscriber to the state*/

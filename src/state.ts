@@ -13,7 +13,8 @@ export interface StateOptions {
     readonly?: boolean
 }
 
-/**State container class to keep track of state values*/
+/**State container class to keep track of state values
+ * undefined is used when the value of the state is invalid*/
 export class State<T> {
     protected _subscribers: StateSubscriber<any>[] = [];
     protected _optionSubscribers: StateOptionsSubscriber<any>[] | undefined;

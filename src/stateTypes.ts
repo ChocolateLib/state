@@ -20,7 +20,7 @@ export class StateSummer extends StateDerived<number, number>{
             for (let i = 0; i < this._states.length; i++) {
                 values[i] = valuesBuffer[i] + diff;
             }
-        }, true);
+        });
     }
 }
 
@@ -40,6 +40,6 @@ export class StateAverage extends StateDerived<number, number> {
             for (let i = 0; i < this._states.length; i++) {
                 values[i] = valuesBuffer[i] + diff;
             }
-        }, true);
+        });
     }
 }
