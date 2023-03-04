@@ -1,90 +1,241 @@
-import { State } from "./state";
+import { State, StateSubscriber } from "./state";
+
+export type StateArraySubValueSubscriber<T> = (index: number, value: T, state?: State<any>) => void
 
 /**The function type for array value subscriber
  * @param index the index of addition or deletion
  * @param amount the amount of items is positive for addition or negative for removals
  * @param values contains any new elements added to the array*/
-export type StateArraySubscriber<T> = (index: number, amount: number, values?: T[]) => void
+export type StateArrayStructureSubscriber<T> = (index: number, amount: number, values?: T[]) => void
 
 /**State representing an array*/
 export class StateArray<T> extends State<T[]> {
-    private _arraySubscribers: StateArraySubscriber<any>[] = [];
+    private _indexlisteners: StateSubscriber<any>[] = [];
+    private _subValueSubscriber: StateArraySubValueSubscriber<T>[] = [];
+    private _structureSubscribers: StateArrayStructureSubscriber<any>[] = [];
 
-    /**Calls all array subscribers
-     * @param index the index of addition or deletion
-     * @param amount the amount of items is positive for addition or negative for removals
-     * @param values contains any new elements added to the array*/
-    protected arrayUpdate(index: number, amount: number, values?: T[]) {
-        Object.freeze(values);
-        for (let i = 0, m = this._arraySubscribers.length; i < m; i++) {
-            try {
-                this._arraySubscribers[i](index, amount, values);
-            } catch (e) {
-                console.warn('Failed while calling subscribers ', e);
+
+    constructor(init: T[] = []) {
+        super(init)
+        for (let i = 0; i < init.length; i++) {
+            const element = init[i];
+            if (element instanceof State) {
+                this._indexlisteners[i] = element.subscribe((val) => {
+                    this._updateSubValue(i, val, <any>element);
+                });
             }
         }
     }
 
+    /** Support for iterator */
     *[Symbol.iterator]() {
         for (let i = 0; i < this._value.length; i++) {
             yield this._value[i]
         }
     }
 
-    /**This adds a function as a subscriber to the state*/
-    subscribeArray<B = T>(func: StateArraySubscriber<B>): typeof func {
-        this._arraySubscribers.push(func);
+    /** This sets the value and dispatches an event*/
+    set set(value: T[]) {
+        if (this._value !== value) {
+            this.setSilent = value;
+            this.update(value);
+        }
+    }
+
+    /** This sets the value of the state*/
+    set setSilent(value: T[]) {
+        if (this._value !== value) {
+            for (let i = 0; i < this._value.length; i++) {
+                const element = this._value[i];
+                if (element instanceof State) { element.unsubscribe(this._indexlisteners[i]); }
+            }
+            this._indexlisteners = [];
+            for (let i = 0; i < value.length; i++) {
+                const element = value[i];
+                if (element instanceof State) {
+                    this._indexlisteners[i] = element.subscribe((val) => {
+                        this._updateSubValue(i, val, <any>element);
+                    });
+                }
+            }
+            this._value = value;
+        }
+    }
+
+    /*       _____       _      __      __   _            
+     *      / ____|     | |     \ \    / /  | |           
+     *     | (___  _   _| |__    \ \  / /_ _| |_   _  ___ 
+     *      \___ \| | | | '_ \    \ \/ / _` | | | | |/ _ \
+     *      ____) | |_| | |_) |    \  / (_| | | |_| |  __/
+     *     |_____/ \__,_|_.__/      \/ \__,_|_|\__,_|\___|*/
+
+    /**This adds a function as a subscriber to the state objects sub value changes*/
+    subscribeSubValue(func: StateArraySubValueSubscriber<T>): typeof func {
+        this._subValueSubscriber.push(func);
         return func;
     }
 
-    /**This removes a function as a subscriber to the state*/
-    unsubscribeArray<B = T>(func: StateArraySubscriber<B>): typeof func {
-        let index = this._arraySubscribers.indexOf(func);
+    /**This removes a function as a subscriber to the state objects sub value changes*/
+    unsubscribeSubValue(func: StateArraySubValueSubscriber<T>): typeof func {
+        const index = this._subValueSubscriber.indexOf(func);
         if (index != -1) {
-            this._arraySubscribers.splice(index, 1);
+            this._subValueSubscriber.splice(index, 1);
         }
         return func;
     }
 
-    /** Returns wether the state has subscribers, true means it has at least one subscribers*/
-    get arrayInUse(): boolean {
-        return this._arraySubscribers.length !== 0;
+    /**Returns wether the state has subscribers for sub values, true means it has at least one subscriber*/
+    get inUseSubValue(): boolean {
+        return this._subValueSubscriber.length !== 0;
     }
 
-    /** Returns wether the state has a specific subscriber, true means it has that subscriber*/
-    hasArraySubscriber(func: StateArraySubscriber<T>): boolean {
-        return this._arraySubscribers.indexOf(func) !== -1;
+    /**Returns wether the state has a specific sub value subscriber, true means it has that subscriber*/
+    hasSubValueSubscriber(func: StateArraySubValueSubscriber<T>): boolean {
+        return this._subValueSubscriber.indexOf(func) !== -1;
+    }
+
+    /** This calls all sub value subscribers with the given value*/
+    protected _updateSubValue(index: number, value: T, state?: State<any>) {
+        for (let i = 0, m = this._subValueSubscriber.length; i < m; i++) {
+            try {
+                this._subValueSubscriber[i](index, value, state);
+            } catch (e) {
+                console.warn('Failed while calling value listeners ', e);
+            }
+        }
+    }
+
+    /*       _____ _                   _                  
+     *      / ____| |                 | |                 
+     *     | (___ | |_ _ __ _   _  ___| |_ _   _ _ __ ___ 
+     *      \___ \| __| '__| | | |/ __| __| | | | '__/ _ \
+     *      ____) | |_| |  | |_| | (__| |_| |_| | | |  __/
+     *     |_____/ \__|_|   \__,_|\___|\__|\__,_|_|  \___|*/
+
+    /**Returns the Value of a key in the object */
+    getIndex(index: number): T {
+        return this._value[index];
+    }
+
+    /**Sets the Value of a key in the object */
+    setIndex(index: number, element: T): T {
+        if (this._value[index] !== element) {
+            if (index > this._value.length) {
+                let arrLen = this._value.length;
+                let len = index - this._value.length + 1
+                let fill = Array(len).fill(undefined);
+                fill[len] = element;
+                this._value[index] = element;
+                if (element instanceof State) {
+                    this._indexlisteners[index] = element.subscribe((val) => {
+                        this._updateSubValue(index, val, <any>element);
+                    });
+                }
+                this._updateStructure(arrLen, len, fill);
+            } else {
+                var removedElem = this._value[index];
+                if (removedElem instanceof State) {
+                    removedElem.unsubscribe(this._indexlisteners[index]);
+                }
+                this._value[index] = element;
+                if (element instanceof State) {
+                    element.subscribe(this._indexlisteners[index]);
+                }
+                this._updateStructure(index, 0, [element]);
+            }
+        }
+        return element;
+    }
+
+    /**Removes the given element if it exists, returns true if any elements were found and deleted
+     * @param val The value to locate in the array
+     * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the search starts at index 0*/
+    removeElement(val: T, fromIndex?: number): boolean {
+        let i, y;
+        i = y = this._value.indexOf(val, fromIndex);
+        while (i !== -1) {
+            var removedElem = this._value[i];
+            if (removedElem instanceof State) {
+                removedElem.unsubscribe(this._indexlisteners[i]);
+                this._indexlisteners.splice(i, 1);
+            }
+            this._value.splice(i, 1);
+            this._updateStructure(i, -1);
+            i = this._value.indexOf(val, fromIndex);
+        }
+        return y !== -1;
     }
 
     /**Adds an element to the back of the array */
     push(...elem: T[]): void {
         let i = this._value.length;
         this._value.push(...elem);
-        this.arrayUpdate(i, elem.length, elem)
+        for (let y = i; y < elem.length; y++) {
+            const element = elem[y];
+            if (element instanceof State) {
+                this._indexlisteners[y] = element.subscribe((val) => {
+                    this._updateSubValue(y, val, <any>element);
+                });
+            }
+        }
+        this._updateStructure(i, elem.length, elem)
     }
 
     /**Adds an element to the front of the array */
     unshift(...elem: T[]): void {
+        for (let i = 0; i < this._value.length; i++) {
+            const element = this._value[i];
+            if (element instanceof State) {
+                element.unsubscribe(this._indexlisteners[i]);
+            }
+        }
+        this._indexlisteners = [];
         this._value.unshift(...elem);
-        this.arrayUpdate(0, elem.length, elem)
+        for (let i = 0; i < this._value.length; i++) {
+            const element = this._value[i];
+            if (element instanceof State) {
+                this._indexlisteners[i] = element.subscribe((val) => {
+                    this._updateSubValue(i, val, <any>element);
+                });
+            }
+        }
+        this._updateStructure(0, elem.length, elem)
     }
 
     /**Removes an element from the back of the array*/
     pop(): T | undefined {
         let len = this._value.length;
         let res = this._value.pop();
+        if (res instanceof State) {
+            res.unsubscribe(<any>this._indexlisteners.pop());
+        }
         if (len > this._value.length) {
-            this.arrayUpdate(this._value.length, -1)
+            this._updateStructure(this._value.length, -1)
         }
         return res;
     }
 
     /**Removes an element from the front of the array*/
     shift(): T | undefined {
+        for (let i = 0; i < this._value.length; i++) {
+            const element = this._value[i];
+            if (element instanceof State) {
+                element.unsubscribe(this._indexlisteners[i]);
+            }
+        }
+        this._indexlisteners = [];
         let len = this._value.length;
         let res = this._value.shift();
+        for (let i = 0; i < this._value.length; i++) {
+            const element = this._value[i];
+            if (element instanceof State) {
+                this._indexlisteners[i] = element.subscribe((val) => {
+                    this._updateSubValue(i, val, <any>element);
+                });
+            }
+        }
         if (len > this._value.length) {
-            this.arrayUpdate(0, -1)
+            this._updateStructure(0, -1)
         }
         return res;
     }
@@ -95,14 +246,41 @@ export class StateArray<T> extends State<T[]> {
      * @param elem Elements to insert into the array in place of the removed elements.
      * @returns An array containing the elements that were removed.*/
     splice(start: number, deleteCount: number, ...elem: T[]): T[] {
+        for (let i = 0; i < this._value.length; i++) {
+            const element = this._value[i];
+            if (element instanceof State) {
+                element.unsubscribe(this._indexlisteners[i]);
+            }
+        }
+        this._indexlisteners = [];
         let res = this._value.splice(start, deleteCount, ...elem);
+        for (let i = 0; i < this._value.length; i++) {
+            const element = this._value[i];
+            if (element instanceof State) {
+                this._indexlisteners[i] = element.subscribe((val) => {
+                    this._updateSubValue(i, val, <any>element);
+                });
+            }
+        }
         if (res.length) {
-            this.arrayUpdate(start, -res.length);
+            this._updateStructure(start, -res.length);
         }
         if (elem.length) {
-            this.arrayUpdate(start, elem.length, elem);
+            this._updateStructure(start, elem.length, elem);
         }
         return res;
+    }
+
+    /**Empties array of all elements*/
+    empty(): void {
+        for (let i = 0; i < this._value.length; i++) {
+            const element = this._value[i];
+            if (element instanceof State) {
+                element.unsubscribe(this._indexlisteners[i]);
+            }
+        }
+        this._indexlisteners = [];
+        super.set = [];
     }
 
     /**Returns the index of the first occurrence of a value in an array, or -1 if it is not present
@@ -117,86 +295,44 @@ export class StateArray<T> extends State<T[]> {
         return this._value.includes(val);
     }
 
-    /**Empties array of all elements*/
-    empty(): void {
-        super.set = [];
-    }
-
     /**Returns length of array */
     get length(): number { return this._value.length; }
 
-    /**Removes the given element if it exists, returns true if any elements were found and deleted
-     * @param val The value to locate in the array
-     * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the search starts at index 0*/
-    remove(val: T, fromIndex?: number): boolean {
-        let i, y;
-        i = y = this._value.indexOf(val, fromIndex);
-        while (i !== -1) {
-            this._value.splice(i, 1);
-            this.arrayUpdate(i, -1);
-            i = this._value.indexOf(val, fromIndex);
+    /**This adds a function as a subscriber to the state objects structural changes*/
+    subscribeStructure(func: StateArrayStructureSubscriber<T>): typeof func {
+        this._structureSubscribers.push(func);
+        return func;
+    }
+
+    /**This removes a function as a subscriber to the state objects structural changes*/
+    unsubscribeStructure(func: StateArrayStructureSubscriber<T>): typeof func {
+        const index = this._structureSubscribers.indexOf(func);
+        if (index != -1) {
+            this._structureSubscribers.splice(index, 1);
+        } else {
+            console.warn('Structure subscriber not found with state');
         }
-        return y !== -1;
+        return func;
     }
 
-    /**Gets the value from the given index*/
-    getIndex(index: number): T | undefined {
-        return this._value[index];
+    /**Returns wether the state has subscribers for object structure, true means it has at least one subscriber*/
+    get inUseStructure(): boolean {
+        return this._structureSubscribers.length !== 0;
     }
 
-    /**Sets the value from the given index
-     * @param index the index to set the value of
-     * @param value the value to set the index to
-     * @returns the given value */
-    setIndex(index: number, value: T): T {
-        if (this._value[index] !== value) {
-            if (index > this._value.length) {
-                let arrLen = this._value.length;
-                let len = index - this._value.length + 1
-                let fill = Array(len).fill(undefined);
-                fill[len] = value;
-                this._value[index] = value;
-                this.arrayUpdate(arrLen, len, fill);
-            } else {
-                this._value[index] = value;
-                this.arrayUpdate(index, 0, [value]);
+    /**Returns wether the state has a specific object structure subscriber, true means it has that subscriber*/
+    hasStructureSubscriber(func: StateArrayStructureSubscriber<T>): boolean {
+        return this._structureSubscribers.indexOf(func) !== -1;
+    }
+
+    /** This calls all object structure subscribers with the structure change*/
+    private _updateStructure(index: number, amount: number, values?: T[]): void {
+        for (let i = 0, m = this._structureSubscribers.length; i < m; i++) {
+            try {
+                this._structureSubscribers[i](index, amount, values);
+            } catch (e) {
+                console.warn('Failed while calling object structure subscribers ', e);
             }
-        }
-        return value
-    }
-
-    /** This method can compare a value to the states value, returns true if values are different*/
-    compare(val: any): boolean {
-        switch (typeof val) {
-            case 'object': {
-                if (val instanceof Array) {
-                    if (val.length === this._value.length) {
-                        for (let i = 0; i < this._value.length; i++) {
-                            if (this._value[i] !== val[i]) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    } else {
-                        return true;
-                    }
-                } else if (val instanceof StateArray) {
-                    if (val._value.length === this._value.length) {
-                        for (let i = 0; i < this._value.length; i++) {
-                            if (this._value[i] !== val._value[i]) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    } else {
-                        return true;
-                    }
-                } else {
-                    return true;
-                }
-            }
-            default:
-                return true;
         }
     }
 }

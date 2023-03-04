@@ -91,7 +91,7 @@ export class StateRepeater<T, I> extends State<T | undefined> {
 
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
-    subscribe<B = T>(func: StateSubscriber<B>, update?: boolean): typeof func {
+    subscribe(func: StateSubscriber<T | undefined>, update?: boolean): typeof func {
         if (this._state && !this._subscriber) {
             this._subscriber = this._state.subscribe((value) => { super.set = this.readFunc(value); }, update);
         }
@@ -99,7 +99,7 @@ export class StateRepeater<T, I> extends State<T | undefined> {
     }
 
     /**This removes a function as a subscriber to the state*/
-    unsubscribe<B = T>(func: StateSubscriber<B>): typeof func {
+    unsubscribe(func: StateSubscriber<T | undefined>): typeof func {
         if (this._subscribers.length === 1 && this._subscriber && this._state) {
             this._state.unsubscribe(this._subscriber);
             this._subscriber = undefined;

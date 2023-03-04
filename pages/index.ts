@@ -1,42 +1,40 @@
 import { State, StateArray, StateAsync, StateAverage, StateDerived, StateNumber, StateObject, StateRepeater } from "../src"
+import { StateClient, StateServer } from "./serverTest";
 
-let calls: (() => void)[] = [];
-setInterval(() => {
-    for (let i = 0; i < calls.length; i++) {
-        calls[i]();
+
+const createState = (val: number) => {
+    let test = () => {
+        return val;
     }
-});
-export class AsyncTest extends StateAsync<number> {
-    private value: number = 0;
-    private interval: any;
-    constructor() {
-        setInterval(() => { this.value++ }, 500);
-        super(async () => {
-            await new Promise((a) => { setTimeout(a, 500) });
-            calls.push(() => {
-                this.asyncFulfill = this.value;
-            })
-        }, async () => {
-            clearInterval(this.interval);
-        }, async (state) => {
-            await new Promise((a) => { setTimeout(a, 500) });
-            this.asyncReject = new Error('yo');
-        }, async (val) => {
-            await new Promise((a) => { setTimeout(a, 500) });
-            this.value = val;
-        });
+    let test2 = (val2: number) => {
+        val = val2;
+    }
+    let test3 = (val2: number) => {
+        val = val2;
+    }
+    return {
+        test,
+        test2,
+        test3,
     }
 }
 
+class test {
+    private _val;
+    constructor(val: number) {
+        this._val = val;
+    }
 
-let asdf = new StateObject({ asdf: 1, vvv: 2 })
+    get() { return this._val; }
 
-for (const iterator of asdf) {
-    console.warn(iterator);
+    set(val2: number) { this._val = val2; }
 }
 
-let asdf2 = new StateArray([1, 2, 3])
+let yo: {}[] = []
+window.yo = yo;
 
-for (const iterator of asdf2) {
-    console.warn(iterator);
+for (let i = 0; i < 1000000; i++) {
+    yo[i] = createState(1);
+    // yo[i] = new test(1);
+    // yo[i] = new State(1);
 }

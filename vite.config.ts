@@ -68,7 +68,7 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
                             formats: ['es', 'cjs'],
                         },
                         rollupOptions: {
-                            external: Object.keys(dependencies)
+                            external: Object.keys(dependencies),
                         },
                     },
                     plugins: [

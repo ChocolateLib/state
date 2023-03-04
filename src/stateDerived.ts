@@ -88,7 +88,7 @@ export class StateDerived<T, I> extends State<T | undefined> {
 
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
-    subscribe<B = T>(func: StateSubscriber<B>, update?: boolean): typeof func {
+    subscribe(func: StateSubscriber<T | undefined>, update?: boolean): typeof func {
         if (this._subscribers.length === 0) {
             this._connect();
         }
@@ -96,7 +96,7 @@ export class StateDerived<T, I> extends State<T | undefined> {
     }
 
     /**This removes a function as a subscriber to the state*/
-    unsubscribe<B = T>(func: StateSubscriber<B>): typeof func {
+    unsubscribe(func: StateSubscriber<T | undefined>): typeof func {
         if (this._subscribers.length === 1) {
             this._disconnect();
         }

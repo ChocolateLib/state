@@ -16,8 +16,8 @@ export interface StateOptions {
 /**State container class to keep track of state values
  * undefined is used when the value of the state is invalid*/
 export class State<T> {
-    protected _subscribers: StateSubscriber<any>[] = [];
-    protected _optionSubscribers: StateOptionsSubscriber<any>[] | undefined;
+    protected _subscribers: StateSubscriber<T>[] = [];
+    protected _optionSubscribers: StateOptionsSubscriber<this>[] | undefined;
     protected _value: T;
 
     /**State container class to keep track of state values*/
@@ -56,12 +56,13 @@ export class State<T> {
 
     /**Adds compatability with promise */
     then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2> {
+        onrejected;
         return new Promise((a) => { a(onfulfilled(this._value)) });
     }
 
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
-    subscribe<B = T>(func: StateSubscriber<B>, update?: boolean): typeof func {
+    subscribe(func: StateSubscriber<T>, update?: boolean): typeof func {
         this._subscribers.push(func);
         if (update) {
             this.then(<any>func);
@@ -70,7 +71,7 @@ export class State<T> {
     }
 
     /**This removes a function as a subscriber to the state*/
-    unsubscribe<B = T>(func: StateSubscriber<B>): typeof func {
+    unsubscribe(func: StateSubscriber<T>): typeof func {
         const index = this._subscribers.indexOf(func);
         if (index != -1) {
             this._subscribers.splice(index, 1);
@@ -138,7 +139,7 @@ export class State<T> {
 
     /**This adds a function as a subscriber to the states options
      * @param update set true to update subscriber*/
-    subscribeOptions<B = T>(func: StateOptionsSubscriber<State<B>>, update?: boolean): typeof func {
+    subscribeOptions(func: StateOptionsSubscriber<this>, update?: boolean): typeof func {
         if (!this._optionSubscribers) {
             this._optionSubscribers = [];
         }
@@ -150,7 +151,7 @@ export class State<T> {
     }
 
     /**This removes a function as a subscriber to the state*/
-    unsubscribeOptions<B = T>(func: StateOptionsSubscriber<State<B>>): typeof func {
+    unsubscribeOptions(func: StateOptionsSubscriber<this>): typeof func {
         if (this._optionSubscribers) {
             const index = this._optionSubscribers.indexOf(func);
             if (index != -1) {
@@ -205,4 +206,11 @@ export class State<T> {
         }
         return false;
     }
+}
+
+export interface StateLike<T> {
+    subscribe(func: StateSubscriber<T>, update?: boolean): StateSubscriber<any>
+    unsubscribe(func: StateSubscriber<T>): StateSubscriber<any>
+    subscribeOptions(func: StateOptionsSubscriber<this>, update?: boolean): StateOptionsSubscriber<any>
+    unsubscribeOptions(func: StateOptionsSubscriber<this>): StateOptionsSubscriber<any>
 }

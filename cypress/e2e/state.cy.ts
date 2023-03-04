@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { State } from "../../src"
+import { State, StateLike } from "../../src"
 
 describe('Initial state', function () {
     it('Should have an initial state of null', async function () {
@@ -257,8 +257,10 @@ describe('Options', function () {
 describe('Other', function () {
     it('State as a type with multiple generics', function () {
         let state = new State(10);
-        let func = (val: State<number | boolean>) => { return val }
+        let state2 = new State('10');
+        let func = (val: StateLike<number | boolean>) => { return val.subscribe(() => { }) }
         func(state);
+        func(state2);
     });
 });
 

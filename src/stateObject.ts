@@ -28,7 +28,7 @@ export type StateObjectDynamic = { [key: string]: any }
 export class StateObject<T extends {}> extends State<T> {
     private _keylisteners: { [Property in keyof T]: StateSubscriber<any> } = <any>{}
     private _subValueSubscriber: StateObjectSubValueSubscriber[] = [];
-    private _structureSubscriber: StateObjectStructureSubscriber[] = [];
+    private _structureSubscribers: StateObjectStructureSubscriber[] = [];
 
     constructor(init: T) {
         super(init)
@@ -36,7 +36,7 @@ export class StateObject<T extends {}> extends State<T> {
             const member = init[key];
             if (member instanceof State) {
                 this._keylisteners[key] = member.subscribe((val) => {
-                    this._updateSubValue(key, val, <State<any>>member)
+                    this._updateSubValue(key, val, <any>member)
                 });
             }
         }
@@ -87,13 +87,13 @@ export class StateObject<T extends {}> extends State<T> {
      *     |_____/ \__,_|_.__/      \/ \__,_|_|\__,_|\___|*/
 
     /**This adds a function as a subscriber to the state objects sub value changes*/
-    addSubValueListener(func: StateObjectSubValueSubscriber): typeof func {
+    subscribeSubValue(func: StateObjectSubValueSubscriber): typeof func {
         this._subValueSubscriber.push(func);
         return func;
     }
 
     /**This removes a function as a subscriber to the state objects sub value changes*/
-    removeSubValueListener(func: StateObjectSubValueSubscriber): typeof func {
+    unsubscribeSubValue(func: StateObjectSubValueSubscriber): typeof func {
         const index = this._subValueSubscriber.indexOf(func);
         if (index != -1) {
             this._subValueSubscriber.splice(index, 1);
@@ -107,7 +107,7 @@ export class StateObject<T extends {}> extends State<T> {
     }
 
     /**Returns wether the state has a specific sub value subscriber, true means it has that subscriber*/
-    hasSubValueListener(func: StateObjectSubValueSubscriber): boolean {
+    hasSubValueSubscriber(func: StateObjectSubValueSubscriber): boolean {
         return this._subValueSubscriber.indexOf(func) !== -1;
     }
 
@@ -209,16 +209,16 @@ export class StateObject<T extends {}> extends State<T> {
     }
 
     /**This adds a function as a subscriber to the state objects structural changes*/
-    addStructureListener(func: StateObjectStructureSubscriber): typeof func {
-        this._structureSubscriber.push(func);
+    subscribeStructure(func: StateObjectStructureSubscriber): typeof func {
+        this._structureSubscribers.push(func);
         return func;
     }
 
     /**This removes a function as a subscriber to the state objects structural changes*/
-    removeStructureListener(func: StateObjectStructureSubscriber): typeof func {
-        const index = this._structureSubscriber.indexOf(func);
+    unsubscribeStructure(func: StateObjectStructureSubscriber): typeof func {
+        const index = this._structureSubscribers.indexOf(func);
         if (index != -1) {
-            this._structureSubscriber.splice(index, 1);
+            this._structureSubscribers.splice(index, 1);
         } else {
             console.warn('Structure subscriber not found with state');
         }
@@ -227,31 +227,22 @@ export class StateObject<T extends {}> extends State<T> {
 
     /**Returns wether the state has subscribers for object structure, true means it has at least one subscriber*/
     get inUseStructure(): boolean {
-        return this._structureSubscriber.length !== 0;
+        return this._structureSubscribers.length !== 0;
     }
 
     /**Returns wether the state has a specific object structure subscriber, true means it has that subscriber*/
-    hasStructureListener(func: StateObjectStructureSubscriber): boolean {
-        return this._structureSubscriber.indexOf(func) !== -1;
+    hasStructureSubscriber(func: StateObjectStructureSubscriber): boolean {
+        return this._structureSubscribers.indexOf(func) !== -1;
     }
 
     /** This calls all object structure subscribers with the structure change*/
     private _updateStructure(keys: KeyUpdate): void {
-        for (let i = 0, m = this._structureSubscriber.length; i < m; i++) {
+        for (let i = 0, m = this._structureSubscribers.length; i < m; i++) {
             try {
-                this._structureSubscriber[i](keys);
+                this._structureSubscribers[i](keys);
             } catch (e) {
                 console.warn('Failed while calling object structure subscribers ', e);
             }
         }
     }
 }
-
-let test = new StateObject({
-    s1: new State(1),
-    s2: 2
-})
-
-test.setKey('s2', 5);
-
-test.mergeKeys({ s2: 1 })
