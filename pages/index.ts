@@ -1,40 +1,24 @@
-import { State, StateArray, StateAsync, StateAverage, StateDerived, StateNumber, StateObject, StateRepeater } from "../src"
-import { StateClient, StateServer } from "./serverTest";
+import { createState, StateRead, } from "../src"
 
+{
+    let test = (state: StateRead<number | string>) => {
+        state.subscribe((val) => {
 
-const createState = (val: number) => {
-    let test = () => {
-        return val;
+        })
     }
-    let test2 = (val2: number) => {
-        val = val2;
-    }
-    let test3 = (val2: number) => {
-        val = val2;
-    }
-    return {
-        test,
-        test2,
-        test3,
-    }
-}
+    let { state, set } = createState(2)
+    let test2 = state.subscribe((val) => {
+        console.warn(val);
 
-class test {
-    private _val;
-    constructor(val: number) {
-        this._val = val;
-    }
-
-    get() { return this._val; }
-
-    set(val2: number) { this._val = val2; }
-}
-
-let yo: {}[] = []
-window.yo = yo;
-
-for (let i = 0; i < 1000000; i++) {
-    yo[i] = createState(1);
-    // yo[i] = new test(1);
-    // yo[i] = new State(1);
+    })
+    set(2)
+    test(state)
+    state.then((val) => {
+        console.warn('1', val);
+        throw new Error('yo')
+    }).then((val) => {
+        console.warn('2a', val);
+    }, (val) => {
+        console.warn('2b', val);
+    })
 }

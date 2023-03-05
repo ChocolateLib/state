@@ -1,4 +1,4 @@
-import { State, StateAsync, StateInfo, StateOptions } from "../src";
+import { StateWriteable, StateAsync, StateInfo, StateOptions } from "../src";
 
 export class StateServer {
     private _value: number;
