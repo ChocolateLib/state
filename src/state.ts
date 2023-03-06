@@ -1,9 +1,9 @@
 
-export type StateDefaultOptions = {
-    readonly name: string,
-    readonly description?: string
-    readonly icon?: () => SVGSVGElement
-    readonly writeable: boolean,
+export interface StateDefaultOptions {
+    name?: string,
+    description?: string
+    icon?: () => SVGSVGElement
+    writeable?: boolean,
 };
 
 export type StateSubscriber<T> = (val: T) => void
@@ -83,7 +83,7 @@ export class StateClass<T, O extends StateDefaultOptions = StateDefaultOptions> 
         return new Promise((a) => { a(onfulfilled(this._value)) });
     }
 
-    subscribeOptions(func: StateOptionsSubscriber<O>, update?: boolean) {
+    subscribeOptions(func: StateOptionsSubscriber<Readonly<O>>, update?: boolean) {
         if (!this._optionSubscribers) {
             this._optionSubscribers = [];
         }
@@ -93,7 +93,7 @@ export class StateClass<T, O extends StateDefaultOptions = StateDefaultOptions> 
         }
         return func;
     }
-    unsubscribeOptions(func: StateOptionsSubscriber<O>) {
+    unsubscribeOptions(func: StateOptionsSubscriber<Readonly<O>>) {
         if (this._optionSubscribers) {
             const index = this._optionSubscribers.indexOf(func);
             if (index != -1) {
@@ -140,7 +140,7 @@ export type StateCheck<T> = (value: T) => void
 
 /**Creates a state
  * @param init initial value for state, use undefined to indicate that state does not have a value yet*/
-export const createState = <T, O extends StateDefaultOptions = StateDefaultOptions>(init: T, check?: StateCheck<T>, options?: O) => {
+export const createState = <T, O extends StateDefaultOptions>(init: T, check?: StateCheck<T>, options?: O) => {
     let state = new StateClass<T, O>(init);
     if (check) {
         //@ts-expect-error
@@ -151,7 +151,7 @@ export const createState = <T, O extends StateDefaultOptions = StateDefaultOptio
         state.options = options;
     }
     return {
-        state: state as State<T, O>,
+        state: state as State<T, Readonly<Partial<O>>>,
         set: ((val: T) => { stateUpdaterSubscribers(state, val); }) as StateSetter<T>,
         setOptions: ((options: O) => { stateUpdaterOptionsSubscribers(state, options); }) as StateOptionSetter<O>,
     }

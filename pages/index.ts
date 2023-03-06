@@ -25,15 +25,23 @@ import { StateDefaultOptions, StateOptions, StateSubscribe } from "../src/state"
 }
 
 {
-    let test = (state: StateOptions<{ min: number } extends StateDefaultOptions> & StateRead<number | string>) => {
+    interface numbs extends StateOptions {
+        min?: number
+    }
+    let test = (state: numbs) => {
 
     }
-    let { state, set } = createState(2)
+    let { state, set, setOptions } = createState(2, undefined, { name: '', yoyo: 5 })
     let test2 = state.subscribe((val) => {
         console.warn(val);
 
     })
+
+    if (state.options) {
+        state.options.name
+    }
     set(2)
+    setOptions({})
     test(state)
     state.then((val) => {
         console.warn('1', val);
