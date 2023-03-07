@@ -1,5 +1,5 @@
-import { createState, StateRead, } from "../src"
-import { StateDefaultOptions, StateOptions, StateSubscribe } from "../src/state"
+import { createStateValue, StateOptions, StateRead, StateSubscribe, StateValueOptions, } from "../src"
+import { instanceOfState } from "../src/shared"
 
 {
     let test = (state: StateSubscribe<number | string> & StateRead<number | string>) => {
@@ -7,7 +7,7 @@ import { StateDefaultOptions, StateOptions, StateSubscribe } from "../src/state"
 
         })
     }
-    let { state, set } = createState(2)
+    let { state, set } = createStateValue(2)
     let test2 = state.subscribe((val) => {
         console.warn(val);
 
@@ -25,13 +25,13 @@ import { StateDefaultOptions, StateOptions, StateSubscribe } from "../src/state"
 }
 
 {
-    interface numbs extends StateOptions {
+    interface numbs extends StateValueOptions {
         min?: number
     }
-    let test = (state: numbs) => {
-
+    let test = (state: StateOptions<numbs>) => {
+        state.options?.name
     }
-    let { state, set, setOptions } = createState(2, undefined, { name: '', yoyo: 5 })
+    let { state, set, setOptions } = createStateValue(2, undefined, { name: '' })
     let test2 = state.subscribe((val) => {
         console.warn(val);
 
@@ -51,4 +51,6 @@ import { StateDefaultOptions, StateOptions, StateSubscribe } from "../src/state"
     }, (val) => {
         console.warn('2b', val);
     })
+
+    instanceOfState(state);
 }
