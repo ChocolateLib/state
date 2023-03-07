@@ -85,6 +85,28 @@ describe('Getting state value', function () {
             done()
         })
     });
+    it('Using then with async chaining return', function (done) {
+        let { state, set, setOptions } = createState(2);
+        state.then(async (val) => {
+            await new Promise((a) => { setTimeout(a, 10) });
+            expect(val).equal(2);
+            return 8;
+        }).then((val) => {
+            expect(val).equal(8);
+            done()
+        })
+    });
+    it('Using then with async chaining throw', function (done) {
+        let { state, set, setOptions } = createState(2);
+        state.then(async (val) => {
+            await new Promise((a) => { setTimeout(a, 10) });
+            expect(val).equal(2);
+            throw 8;
+        }).then(() => { }, (val) => {
+            expect(val).equal(8);
+            done()
+        })
+    });
 });
 
 
