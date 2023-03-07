@@ -20,7 +20,7 @@ class StateValue<T> extends StateBase<T, StateValueOptions> {
     }
 
     setOptionAndUpdate(options: StateValueOptions) {
-        this.options = options;
+        this.options = { ...this.options, ...options };
         this.updateOptionsSubscribers(options);
     }
 
@@ -60,10 +60,10 @@ class StateValue<T> extends StateBase<T, StateValueOptions> {
 /**Creates a state which holds a value
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
  * @param setter function called when state value is set via setter, set true to just have */
-export const createState = <T>(init: T, setter?: StateSetter<T> | boolean, options?: StateValueOptions) => {
-    let state = new StateValue<T>(init);
+export const createState = <T = undefined>(init?: T, setter?: StateSetter<T> | boolean, options?: StateValueOptions) => {
+    let state = new StateValue<T>(init as T);
     if (setter) {
-        state.externalSetter = (setter ? state.setAndUpdate : setter);
+        state.externalSetter = (setter === true ? state.setAndUpdate : setter);
     }
     if (options) {
         state.options = options;

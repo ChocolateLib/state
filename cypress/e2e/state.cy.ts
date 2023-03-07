@@ -1,266 +1,225 @@
 /// <reference types="cypress" />
-import { State, StateLike } from "../../src"
+import { createState } from "../../src"
 
 describe('Initial state', function () {
-    it('Should have an initial state of null', async function () {
-        expect(await (new State(null))).equal(null);
+    it('Creating a state with no initial value', async function () {
+        let { state, set, setOptions } = createState();
+        expect(await state).equal(undefined);
     });
-    it('Should have an initial state of true', async function () {
-        expect(await (new State(true))).equal(true);
-    });
-    it('Should have an initial state of 1', async function () {
-        expect(await (new State(1))).equal(1);
-    });
-    it('Should have an initial state of "test"', async function () {
-        expect(await (new State('test'))).equal('test');
-    });
-    it('Should have an initial state type of an object', async function () {
-        expect(typeof await (new State({}))).equal('object');
-    });
-    it('Should have an initial state type of an array', async function () {
-        expect(await (new State([]))).instanceOf(Array);
+    it('Creating a state with initial value', async function () {
+        let { state, set, setOptions } = createState(2);
+        expect(await state).equal(2);
     });
 });
 
-describe('Value', function () {
-    it('Setting/Getting true', async function () {
-        let state = new State(false);
-        expect(await state).equal(false);
-        state.set = true;
-        expect(await state).equal(true);
+describe('Setting state value', function () {
+    it('From owner context', async function () {
+        let { state, set, setOptions } = createState(2);
+        expect(await state).equal(2);
+        set(4)
+        expect(await state).equal(4);
     });
-    it('Setting/Getting 1', async function () {
-        let state = new State(0);
-        expect(await state).equal(0);
-        state.set = 1;
-        expect(await state).equal(1);
+    it('From user context with standard function and writable set false', async function () {
+        let { state, set, setOptions } = createState(2, true);
+        expect(await state).equal(2);
+        state.set(4)
+        expect(await state).equal(2);
     });
-    it('Setting/Getting "test"', async function () {
-        let state = new State('');
-        expect(await state).equal('');
-        state.set = 'test';
-        expect(await state).equal('test');
+    it('From user context with standard function and writable set true', async function () {
+        let { state, set, setOptions } = createState(2, true, { writeable: true });
+        expect(await state).equal(2);
+        state.set(4)
+        expect(await state).equal(4);
     });
-    it('Setting/Getting an object', async function () {
-        let state = new State<number | {}>(0);
-        expect(await state).equal(0);
-        state.set = {};
-        expect(typeof await state).equal('object');
+    it('From user context with custom function and writable set false', async function () {
+        let { state, set, setOptions } = createState(2, (val) => {
+            set(val * 2);
+        });
+        expect(await state).equal(2);
+        state.set(4)
+        expect(await state).equal(2);
     });
-    it('Setting/Getting an array', async function () {
-        let state = new State<number | {}>(0);
-        expect(await state).equal(0);
-        state.set = [];
-        expect(await state).instanceOf(Array);
+    it('From user context with custom function and writable set true', async function () {
+        let { state, set, setOptions } = createState(2, (val) => {
+            set(val * 2);
+        }, { writeable: true });
+        expect(await state).equal(2);
+        state.set(4)
+        expect(await state).equal(8);
     });
+});
 
-    it('Add one subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribe(() => { });
-        expect(state.inUse).to.be.true;
-        expect(state.hasSubscriber(listener1)).to.be.true;
+describe('Getting state value', function () {
+    it('Using get', async function () {
+        let { state, set, setOptions } = createState(2);
+        expect(state.get()).equal(2);
     });
-    it('Add two subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribe(() => { });
-        let listener2 = state.subscribe(() => { });
-        expect(state.inUse).to.be.true;
-        expect(state.hasSubscriber(listener1)).to.be.true;
-        expect(state.hasSubscriber(listener2)).to.be.true;
+    it('Using await', async function () {
+        let { state, set, setOptions } = createState(2);
+        expect(await state).equal(2);
     });
-    it('Insert two subscribers then remove first subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribe(() => { });
-        let listener2 = state.subscribe(() => { });
-        state.unsubscribe(listener1);
-        expect(state.inUse).to.be.true;
-        expect(state.hasSubscriber(listener1)).to.be.false;
-        expect(state.hasSubscriber(listener2)).to.be.true;
+    it('Using then', function (done) {
+        let { state, set, setOptions } = createState(2);
+        state.then((val) => {
+            expect(val).equal(2);
+            done()
+        })
     });
-    it('Insert two subscribers then removeing both subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribe(() => { });
-        let listener2 = state.subscribe(() => { });
-        state.unsubscribe(listener1);
-        state.unsubscribe(listener2);
-        expect(state.inUse).to.be.false;
-        expect(state.hasSubscriber(listener1)).to.be.false;
-        expect(state.hasSubscriber(listener2)).to.be.false;
+    it('Using then with chaining return', function (done) {
+        let { state, set, setOptions } = createState(2);
+        state.then((val) => {
+            expect(val).equal(2);
+            return 8;
+        }).then((val) => {
+            expect(val).equal(8);
+            done()
+        })
     });
+    it('Using then with chaining throw', function (done) {
+        let { state, set, setOptions } = createState(2);
+        state.then((val) => {
+            expect(val).equal(2);
+            throw 8;
+        }).then(() => { }, (val) => {
+            expect(val).equal(8);
+            done()
+        })
+    });
+});
 
-    it('Setting value with one subscribers', function (done) {
-        let state = new State(0);
-        state.subscribe((val) => { if (val === 10) { done() } else { done(new Error('Unexpected value')) } });
-        state.set = 10;
+
+describe('Value subscriber', function () {
+    it('Add one subscribers with update set true', function () {
+        let { state, set, setOptions } = createState(2);
+        state.subscribe((value) => { expect(value).equal(2); }, true);
     });
-    it('Setting value with multiple subscribers', function () {
-        let state = new State(0);
-        let proms = Promise.all([
-            new Promise((a) => { state.subscribe((val) => { a(0) }) }),
-            new Promise((a) => { state.subscribe((val) => { a(0) }) }),
-            new Promise((a) => { state.subscribe((val) => { a(0) }) }),
+    it('Add two subscribers with update set true', async function () {
+        let { state, set, setOptions } = createState(2);
+        let values = await Promise.all([
+            new Promise<number>((a) => { state.subscribe(a, true) }),
+            new Promise<number>((a) => { state.subscribe(a, true) }),
         ])
-        state.set = 10;
-        return proms;
+        expect(values).deep.equal([2, 2]);
+    });
+    it('Insert two subscribers then remove first subscribers', function (done) {
+        let { state, set, setOptions } = createState(2);
+        let func = state.subscribe(() => { done('Fail') });
+        state.subscribe(() => { done() });
+        state.unsubscribe(func);
+        set(4)
+    });
+    it('Insert two subscribers then removeing both subscribers', function (done) {
+        let { state, set, setOptions } = createState(2);
+        let func1 = state.subscribe(() => { done('Fail') });
+        let func2 = state.subscribe(() => { done('Fail') });
+        state.unsubscribe(func1);
+        state.unsubscribe(func2);
+        set(4)
+        done()
+    });
+    it('Setting value with one subscribers', function (done) {
+        let { state, set, setOptions } = createState(2);
+        state.subscribe((val) => { done((val === 10 ? undefined : 'Unexpected value')) });
+        set(10);
+    });
+    it('Setting value with multiple subscribers', async function () {
+        let { state, set, setOptions } = createState(2);
+        let values = Promise.all([
+            new Promise<number>((a) => { state.subscribe(a) }),
+            new Promise<number>((a) => { state.subscribe(a) }),
+            new Promise<number>((a) => { state.subscribe(a) }),
+        ])
+        set(10);
+        expect(await values).deep.equal([10, 10, 10]);
     });
     it('Setting value with subscribers with exception', function () {
-        let state = new State(0);
+        let { state, set, setOptions } = createState(2);
         state.subscribe((val) => { throw false });
-        state.set = 10;
-    });
-
-    it('Setting value silently with one subscribers', function (done) {
-        let state = new State(0);
-        state.subscribe((val) => { done(new Error('Unexpected update')) });
-        state.setSilent = 10;
-        done()
-    });
-
-    it('Manual update call with one subscribers', function (done) {
-        let state = new State(0);
-        state.subscribe((val) => { if (val === 10) { done() } else { done(new Error('Unexpected state')) } });
-        state.update(10);
-    });
-
-    it('Update call with skip of one subscribers', function (done) {
-        let state = new State(0);
-        let sub = state.subscribe((val) => { done(new Error('Unexpected state')) });
-        state.updateSkip(10, sub);
-        done()
-    });
-
-    it('Add one subscribers with update set true', function (done) {
-        let state = new State(1);
-        state.subscribe((val) => { if (val === 1) { done(); } else { done(new Error('State incorrect')) } }, true);
-    });
-
-    it('Add multiple subscribers with update set true', function () {
-        let state = new State(1);
-        let proms = Promise.all([
-            new Promise((a) => { state.subscribe((val) => { if (val === 1) { a(0); } }, true) }),
-            new Promise((a) => { state.subscribe((val) => { if (val === 1) { a(0); } }, true) }),
-            new Promise((a) => { state.subscribe((val) => { if (val === 1) { a(0); } }, true) }),
-        ])
-        return proms;
-    });
-
-    it('inUse', function () {
-        let state = new State(10);
-        expect(state.inUse).equal(false);
-        state.subscribe(() => { });
-        expect(state.inUse).equal(true);
-    });
-
-    it('hasSubscriber', function () {
-        let state = new State(10);
-        let func = state.subscribe(() => { });
-        expect(state.hasSubscriber(func)).equal(true);
+        set(10);
     });
 });
+
 
 describe('Options', function () {
-    it('State initial options', async function () {
-        let options = { info: { name: 'YOYO' } }
-        let state = new State(10, options);
-        expect(state.info).equal(options.info);
+    it('Initial options set', function () {
+        let options = {
+            name: 'Test',
+            description: '',
+            icon: () => { return document.createElementNS('http://www.w3.org/2000/svg', 'svg') },
+            writeable: false,
+        }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        expect(state.options).equal(options);
     });
-    it('State setting options', async function () {
-        let options = { info: { name: 'YOYO' } }
-        let state = new State(10, options);
-        expect(state.info).equal(options.info);
-        let options2 = { info: { name: 'PPPP' } }
-        state.options = options2;
-        expect(state.info).equal(options2.info);
-    });
-
-    it('Add one subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribeOptions(() => { });
-        expect(state.inUseOptions).to.be.true;
-        expect(state.hasOptionsSubscriber(listener1)).to.be.true;
-    });
-    it('Add two subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribeOptions(() => { });
-        let listener2 = state.subscribeOptions(() => { });
-        expect(state.inUseOptions).to.be.true;
-        expect(state.hasOptionsSubscriber(listener1)).to.be.true;
-        expect(state.hasOptionsSubscriber(listener2)).to.be.true;
-    });
-    it('Insert two subscribers then remove first subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribeOptions(() => { });
-        let listener2 = state.subscribeOptions(() => { });
-        state.unsubscribeOptions(listener1);
-        expect(state.inUseOptions).to.be.true;
-        expect(state.hasOptionsSubscriber(listener1)).to.be.false;
-        expect(state.hasOptionsSubscriber(listener2)).to.be.true;
-    });
-    it('Insert two subscribers then removeing both subscribers correctly', function () {
-        let state = new State(0);
-        let listener1 = state.subscribeOptions(() => { });
-        let listener2 = state.subscribeOptions(() => { });
-        state.unsubscribeOptions(listener1);
-        state.unsubscribeOptions(listener2);
-        expect(state.inUseOptions).to.be.false;
-        expect(state.hasOptionsSubscriber(listener1)).to.be.false;
-        expect(state.hasOptionsSubscriber(listener2)).to.be.false;
+    it('Setting options', function () {
+        let options = {
+            name: 'Test',
+            description: '',
+            writeable: false,
+        }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        expect(state.options).equal(options);
+        setOptions({ name: 'Test2' })
+        expect(state.options?.name).equal('Test2');
+        expect(state.options).deep.equal({ name: 'Test2', description: '', writeable: false, });
     });
 
-    it('Setting value with one subscribers', function (done) {
-        let state = new State(0);
-        state.subscribeOptions((val) => { if (val === state) { done() } else { done(new Error('Unexpected value')) } });
-        state.options = {};
+    it('Add one subscribers with update set true', function () {
+        let options = { name: 'Test', description: '', writeable: false, }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        state.subscribeOptions((value) => { expect(value).equal(options); }, true);
     });
-    it('Setting value with multiple subscribers', function () {
-        let state = new State(0);
-        let proms = Promise.all([
-            new Promise((a) => { state.subscribeOptions((val) => { a(0) }) }),
-            new Promise((a) => { state.subscribeOptions((val) => { a(0) }) }),
-            new Promise((a) => { state.subscribeOptions((val) => { a(0) }) }),
+    it('Add two subscribers with update set true', async function () {
+        let options = { name: 'Test', description: '', writeable: false, }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        let values = await Promise.all([
+            new Promise((a) => { state.subscribeOptions(a, true) }),
+            new Promise((a) => { state.subscribeOptions(a, true) }),
         ])
-        state.options = {};
-        return proms;
+        expect(values).deep.equal([options, options]);
+    });
+    it('Insert two subscribers then remove first subscribers', function (done) {
+        let options = { name: 'Test', description: '', writeable: false, }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        let func = state.subscribeOptions(() => { done('Fail') });
+        state.subscribeOptions(() => { done() });
+        state.unsubscribeOptions(func);
+        setOptions({ name: 'aa' })
+    });
+    it('Insert two subscribers then removeing both subscribers', function (done) {
+        let options = { name: 'Test', description: '', writeable: false, }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        let func1 = state.subscribeOptions(() => { done('Fail') });
+        let func2 = state.subscribeOptions(() => { done('Fail') });
+        state.unsubscribeOptions(func1);
+        state.unsubscribeOptions(func2);
+        setOptions({ name: 'Yo' })
+        done()
+    });
+    it('Setting value with one subscribers', function (done) {
+        let options = { name: 'Test', description: '', writeable: false, }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        state.subscribeOptions((val) => {
+            expect(val).deep.equal({ name: 'Yo' });
+            done()
+        });
+        setOptions({ name: 'Yo' })
+    });
+    it('Setting value with multiple subscribers', async function () {
+        let options = { name: 'Test', description: '', writeable: false, }
+        let { state, set, setOptions } = createState(2, undefined, options);
+        let values = Promise.all([
+            new Promise((a) => { state.subscribeOptions(a) }),
+            new Promise((a) => { state.subscribeOptions(a) }),
+            new Promise((a) => { state.subscribeOptions(a) }),
+        ])
+        setOptions({ name: 'Yo' })
+        expect(await values).deep.equal([{ name: 'Yo' }, { name: 'Yo' }, { name: 'Yo' }]);
     });
     it('Setting value with subscribers with exception', function () {
-        let state = new State(0);
+        let options = { name: 'Test', description: '', writeable: false, }
+        let { state, set, setOptions } = createState(2, undefined, options);
         state.subscribeOptions((val) => { throw false });
-        state.options = {};
-    });
-    it('Add one subscribers with update set true', function (done) {
-        let state = new State(1);
-        state.subscribeOptions((val) => { if (val === state) { done(); } else { done(new Error('State incorrect')) } }, true);
-    });
-    it('Add multiple subscribers with update set true', function () {
-        let state = new State(1);
-        let proms = Promise.all([
-            new Promise((a) => { state.subscribeOptions((val) => { if (val === state) { a(0); } }, true) }),
-            new Promise((a) => { state.subscribeOptions((val) => { if (val === state) { a(0); } }, true) }),
-            new Promise((a) => { state.subscribeOptions((val) => { if (val === state) { a(0); } }, true) }),
-        ])
-        return proms;
-    });
-
-    it('inUseOptions', function () {
-        let state = new State(10);
-        expect(state.inUseOptions).equal(false);
-        state.subscribeOptions(() => { });
-        expect(state.inUseOptions).equal(true);
-    });
-    it('hasOptionsSubscriber', function () {
-        let state = new State(10);
-        let func = state.subscribeOptions(() => { });
-        expect(state.hasOptionsSubscriber(func)).equal(true);
+        setOptions({ name: 'Yo' })
     });
 });
-
-describe('Other', function () {
-    it('State as a type with multiple generics', function () {
-        let state = new State(10);
-        let state2 = new State('10');
-        let func = (val: StateLike<number | boolean>) => { return val.subscribe(() => { }) }
-        func(state);
-        func(state2);
-    });
-});
-
