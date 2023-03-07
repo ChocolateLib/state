@@ -1,5 +1,31 @@
-import { createStateValue, StateOptions, StateRead, StateSubscribe, StateValueOptions, } from "../src"
+import { createState, StateOptions, StateRead, StateSubscribe, StateValueOptions, } from "../src"
 import { instanceOfState } from "../src/shared"
+
+{
+    let { state, set, setOptions } = createState(2, true, { writeable: false })
+    state.then(async (val) => { console.warn('1', val); })
+    console.warn('2', state.get());
+    state.set(4)
+    console.warn('3', await state);
+    setOptions({ writeable: true })
+    state.set(4)
+    console.warn('3', await state);
+
+    let err = false
+    state.then((val) => {
+        console.warn('æ1', val);
+        if (err) {
+            return 2;
+        } else {
+            throw {};
+        }
+    }).then((val) => {
+        console.warn('æ2', val);
+    }, (val) => {
+        console.warn('æ3', val);
+    })
+
+}
 
 {
     let test = (state: StateSubscribe<number | string> & StateRead<number | string>) => {
@@ -7,7 +33,7 @@ import { instanceOfState } from "../src/shared"
 
         })
     }
-    let { state, set } = createStateValue(2)
+    let { state, set } = createState(2)
     let test2 = state.subscribe((val) => {
         console.warn(val);
 
@@ -31,7 +57,7 @@ import { instanceOfState } from "../src/shared"
     let test = (state: StateOptions<numbs>) => {
         state.options?.name
     }
-    let { state, set, setOptions } = createStateValue(2, undefined, { name: '' })
+    let { state, set, setOptions } = createState(2, undefined, { name: '' })
     let test2 = state.subscribe((val) => {
         console.warn(val);
 

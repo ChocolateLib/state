@@ -65,10 +65,10 @@ export abstract class StateBase<T, O extends StateDefaultOptions = StateDefaultO
     //Setting
     abstract set(value: T): void
 
-    updateSubscribers(val: T): void {
+    updateSubscribers(value: T): void {
         for (let i = 0, m = this.subscribers.length; i < m; i++) {
             try {
-                this.subscribers[i](val);
+                this.subscribers[i](value);
             } catch (e) {
                 console.warn('Failed while calling subscribers ', e, this, this.subscribers[i]);
             }
@@ -118,6 +118,9 @@ export abstract class StateBase<T, O extends StateDefaultOptions = StateDefaultO
         }
     }
 }
+
+/**Function used to check set value for state */
+export type StateSetter<T> = (value: T) => void
 
 /**Checks if a variable is an instance of a state*/
 export const instanceOfState = (state: any) => {
