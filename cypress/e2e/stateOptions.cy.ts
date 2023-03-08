@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { createState, createStateOptions } from "../../src"
+import { createState } from "../../src"
 
 describe('Initial state', function () {
     it('Creating a state with no initial value', async function () {
@@ -148,13 +148,5 @@ describe('Value subscriber', function () {
         let { state, set } = createState(2);
         state.subscribe((val) => { throw false });
         set(10);
-    });
-});
-
-
-describe('Options', function () {
-    it('Initial options set', function () {
-        let { state, set, options } = createState(2, undefined, createStateOptions({ name: 'Test', description: '', writeable: false, }).options);
-        expect(state.options()).equal(options);
     });
 });
