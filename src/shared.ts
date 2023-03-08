@@ -30,7 +30,7 @@ export interface StateWrite<T> {
 }
 
 export interface State<T, O extends StateOptions = StateOptions> extends StateSubscribe<T>, StateRead<T>, StateWrite<T> {
-    options(): StateReadSubscribe<O> | undefined
+    options(): Promise<StateReadSubscribe<O> | undefined>
 }
 
 

@@ -1,18 +1,18 @@
 import { StateRead, StateSubscribe, StateSubscriber, StateWrite } from "./shared";
 
 export abstract class StateBase<T> implements StateSubscribe<T>, StateRead<T>, StateWrite<T>{
-    subscribers: StateSubscriber<T>[] = [];
+    _subscribers: StateSubscriber<T>[] = [];
 
     //Subscribe
     subscribe<B extends StateSubscriber<T>>(func: B): B {
-        this.subscribers.push(func);
+        this._subscribers.push(func);
         return func;
     }
 
     unsubscribe<B extends StateSubscriber<T>>(func: B): B {
-        const index = this.subscribers.indexOf(func);
+        const index = this._subscribers.indexOf(func);
         if (index != -1) {
-            this.subscribers.splice(index, 1);
+            this._subscribers.splice(index, 1);
         } else {
             console.warn('Subscriber not found with state', this, func);
         }
@@ -20,11 +20,11 @@ export abstract class StateBase<T> implements StateSubscribe<T>, StateRead<T>, S
     }
 
     updateSubscribers(value: T): void {
-        for (let i = 0, m = this.subscribers.length; i < m; i++) {
+        for (let i = 0, m = this._subscribers.length; i < m; i++) {
             try {
-                this.subscribers[i](value);
+                this._subscribers[i](value);
             } catch (e) {
-                console.warn('Failed while calling subscribers ', e, this, this.subscribers[i]);
+                console.warn('Failed while calling subscribers ', e, this, this._subscribers[i]);
             }
         }
     }

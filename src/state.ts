@@ -11,6 +11,7 @@ class StateValue<T> extends StateBase<T> implements State<T> {
     _value: T;
     _setter: StateSetter<T> | undefined;
     _options: StateReadSubscribe<StateOptions> | undefined
+    _optionsFunc: (() => Promise<StateReadSubscribe<StateOptions>>) | undefined
 
     setAndUpdate(value: T) {
         this._value = value;
@@ -42,29 +43,30 @@ class StateValue<T> extends StateBase<T> implements State<T> {
         return await func(this._value);
     }
 
-    options(): StateReadSubscribe<StateOptions> | undefined {
-        return this._options
+    async options(): Promise<StateReadSubscribe<StateOptions> | undefined> {
+        if (!this._options) {
+            if (this._optionsFunc) {
+                let test = this._optionsFunc();
+                delete this._optionsFunc;
+            }
+        }
+        return this._options;
     }
 }
 
 /**Creates a state which holds a value
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
  * @param setter function called when state value is set via setter, set true let state set it's own value */
-export const createState = <T = undefined>(init?: T, setter?: StateSetter<T> | boolean, options?: StateReadSubscribe<StateOptions> | StateOptions) => {
+export const createState = <T = undefined>(init?: T, setter?: StateSetter<T> | boolean, options?: () => Promise<StateReadSubscribe<StateOptions>>) => {
     let state = new StateValue<T>(init as T);
     if (setter) {
         state._setter = (setter === true ? state.setAndUpdate : setter);
     }
     if (options) {
-        if (options instanceof StateOptionsClass) {
-            state._options = options;
-        } else {
-            state._options = createStateOptions(<StateOptions>options).options;
-        }
+        state._optionsFunc = options;
     }
     return {
         state: state as State<T>,
-        set: state.setAndUpdate.bind(state) as (value: T) => void,
-        options: state._options
+        set: state.setAndUpdate.bind(state) as (value: T) => void
     }
 }

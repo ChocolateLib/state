@@ -7,7 +7,7 @@ export class StateOptionsClass<T extends StateOptions = StateOptions> extends St
         this.options = { ...init };
     }
 
-    subscribers: StateSubscriber<T>[] = [];
+    _subscribers: StateSubscriber<T>[] = [];
     options: T;
     externalSetter: StateSetter<T> | undefined;
 
