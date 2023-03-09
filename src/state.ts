@@ -1,8 +1,8 @@
-import { State, StateReadSubscribe, StateSetter, StateSubscriber, StateOptions } from "./shared";
+import { State, StateSetter, StateSubscriber, StateOptions, StateSubscribe } from "./shared";
 import { StateBase } from "./stateBase";
 import { createStateOptions, StateOptionsClass } from "./stateOptions";
 
-class StateValue<T> extends StateBase<T> implements State<T> {
+class StateClass<T> extends StateBase<T> implements State<T> {
     constructor(init: T) {
         super();
         this._value = init;
@@ -10,8 +10,7 @@ class StateValue<T> extends StateBase<T> implements State<T> {
 
     _value: T;
     _setter: StateSetter<T> | undefined;
-    _options: StateReadSubscribe<StateOptions> | undefined
-    _optionsFunc: (() => Promise<StateReadSubscribe<StateOptions>>) | undefined
+    _options: StateSubscribe<StateOptions> | undefined
 
     setAndUpdate(value: T) {
         this._value = value;
@@ -35,7 +34,7 @@ class StateValue<T> extends StateBase<T> implements State<T> {
         }
     }
 
-    get(): T {
+    async get(): Promise<T> {
         return this._value
     }
 
@@ -43,13 +42,7 @@ class StateValue<T> extends StateBase<T> implements State<T> {
         return await func(this._value);
     }
 
-    async options(): Promise<StateReadSubscribe<StateOptions> | undefined> {
-        if (!this._options) {
-            if (this._optionsFunc) {
-                let test = this._optionsFunc();
-                delete this._optionsFunc;
-            }
-        }
+    options(): StateSubscribe<StateOptions> | undefined {
         return this._options;
     }
 }
@@ -57,13 +50,17 @@ class StateValue<T> extends StateBase<T> implements State<T> {
 /**Creates a state which holds a value
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
  * @param setter function called when state value is set via setter, set true let state set it's own value */
-export const createState = <T = undefined>(init?: T, setter?: StateSetter<T> | boolean, options?: () => Promise<StateReadSubscribe<StateOptions>>) => {
-    let state = new StateValue<T>(init as T);
+export const createState = <T = undefined>(init?: T, setter?: StateSetter<T> | boolean, options?: StateSubscribe<StateOptions> | (() => PromiseLike<StateOptions>) | StateOptions) => {
+    let state = new StateClass<T>(init as T);
     if (setter) {
         state._setter = (setter === true ? state.setAndUpdate : setter);
     }
     if (options) {
-        state._optionsFunc = options;
+        if (options instanceof StateOptionsClass) {
+            state._options = options;
+        } else {
+            state._options = createStateOptions(<StateOptions>options).options;
+        }
     }
     return {
         state: state as State<T>,

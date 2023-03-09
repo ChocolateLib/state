@@ -1,9 +1,8 @@
-import { StateRead, StateSubscribe, StateSubscriber, StateWrite } from "./shared";
+import { StateSubscribe, StateSubscriber } from "./shared";
 
-export abstract class StateBase<T> implements StateSubscribe<T>, StateRead<T>, StateWrite<T>{
+export abstract class StateBase<T> implements StateSubscribe<T>{
     _subscribers: StateSubscriber<T>[] = [];
 
-    //Subscribe
     subscribe<B extends StateSubscriber<T>>(func: B): B {
         this._subscribers.push(func);
         return func;
@@ -29,9 +28,7 @@ export abstract class StateBase<T> implements StateSubscribe<T>, StateRead<T>, S
         }
     }
 
-    abstract set(value: T): void
-
-    abstract get(): T | PromiseLike<T>
+    abstract get(): PromiseLike<T>
 
     abstract then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1 | TResult2>
 }

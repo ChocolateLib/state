@@ -7,14 +7,14 @@ export interface StateOptions {
 
 export type StateSubscriber<T> = (val: T) => void
 
-export interface StateRead<T> {
+export interface StateRead<T> extends PromiseLike<T> {
     /** This sets the value of the state and updates all subscribers*/
-    get(): T | PromiseLike<T>
+    get(): PromiseLike<T>
     /**Makes the state awaitable */
     then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2>
 }
 
-export interface StateSubscribe<T> {
+export interface StateSubscribe<T> extends StateRead<T> {
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
     subscribe<B extends StateSubscriber<T>>(func: B, update?: boolean): B
@@ -22,15 +22,14 @@ export interface StateSubscribe<T> {
     unsubscribe<B extends StateSubscriber<T>>(func: B): B
 }
 
-export interface StateReadSubscribe<T> extends StateRead<T>, StateSubscribe<T> { }
-
-export interface StateWrite<T> {
+export interface StateWrite<T> extends StateSubscribe<T> {
     /** This sets the value of the state and updates all subscribers*/
     set(val: T): void
 }
 
-export interface State<T, O extends StateOptions = StateOptions> extends StateSubscribe<T>, StateRead<T>, StateWrite<T> {
-    options(): Promise<StateReadSubscribe<O> | undefined>
+export interface State<T, O extends StateOptions = StateOptions> extends StateWrite<T> {
+    /**Returns the states options*/
+    options(): StateSubscribe<O> | undefined
 }
 
 

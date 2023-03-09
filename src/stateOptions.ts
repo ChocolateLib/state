@@ -1,14 +1,15 @@
-import { StateOptions, StateReadSubscribe, StateSetter, StateSubscriber } from "./shared";
+import { StateOptions, StateSetter, StateSubscribe, StateSubscriber } from "./shared";
 import { StateBase } from "./stateBase";
 
-export class StateOptionsClass<T extends StateOptions = StateOptions> extends StateBase<T> implements StateReadSubscribe<T> {
-    constructor(init: T) {
+export class StateOptionsClass<T> extends StateBase<T> {
+    constructor(init: T | (() => PromiseLike<T>)) {
         super();
-        this.options = { ...init };
+        if (typeof init !== 'function') {
+            this.options = { ...init };
+        }
     }
-
-    _subscribers: StateSubscriber<T>[] = [];
-    options: T;
+    options: T | undefined;
+    optionsFunc: (() => PromiseLike<T>) | undefined;
     externalSetter: StateSetter<T> | undefined;
 
     setAndUpdate(value: T) {
@@ -19,7 +20,7 @@ export class StateOptionsClass<T extends StateOptions = StateOptions> extends St
     subscribe<B extends StateSubscriber<T>>(func: B, update?: boolean): B {
         if (update) {
             try {
-                func(this.options);
+                this.then(func);
             } catch (error) {
                 console.warn('Failed while calling update function', this, func);
             }
@@ -27,31 +28,26 @@ export class StateOptionsClass<T extends StateOptions = StateOptions> extends St
         return super.subscribe(func);
     }
 
-    set(value: T): void {
-        if (this.externalSetter && this.options !== value) {
-            this.externalSetter(value)
+    async get(): Promise<T> {
+        if (this.optionsFunc) {
+            this.options = await this.optionsFunc();
+            delete this.optionsFunc;
+            return this.options;
+        } else {
+            return <T>this.options;
         }
     }
 
-    get(): T {
-        return this.options
-    }
-
     async then<TResult1 = T>(func: ((value: T) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        return await func(this.options);
+        return func(await this.get());
     }
 }
 
-/**Creates a state which holds a value
- * @param init initial value for state, use undefined to indicate that state does not have a value yet
- * @param setter function called when state value is set via setter, set true to just have */
-export const createStateOptions = <T extends StateOptions = StateOptions>(init: T, setter?: StateSetter<T> | boolean) => {
-    let options = new StateOptionsClass<T>(init as T);
-    if (setter) {
-        options.externalSetter = (setter === true ? options.setAndUpdate : setter);
-    }
+/**Creates a state which holds options for another state*/
+export const createStateOptions = <T extends StateOptions = StateOptions>(init: T | (() => PromiseLike<T>)) => {
+    let options = new StateOptionsClass<T>(init);
     return {
-        options: options as StateReadSubscribe<T>,
+        options: options as StateSubscribe<T>,
         set: options.setAndUpdate.bind(options) as (options: T) => void,
     }
 }

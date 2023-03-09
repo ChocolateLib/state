@@ -1,8 +1,11 @@
-import { State, StateReadSubscribe, StateSubscriber, StateOptions } from "./shared";
+import { StateSubscribe, StateSubscriber, StateWrite } from "./shared";
 import { StateBase } from "./stateBase";
 
-class StateRepeater<T, I, O extends StateOptions = StateOptions> extends StateBase<T | undefined> implements State<T | undefined, O> {
-    constructor(getter: (val: I) => T, state?: State<I, O>, setter?: (val: T) => I) {
+type Getter<T, I> = (value: I) => T
+type Setter<T, I> = (value: T) => I
+
+class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements StateWrite<T | undefined> {
+    constructor(state?: StateWrite<I>, getter?: Getter<T, I>, setter?: Setter<T, I>) {
         super();
         this._getter = getter;
         this._state = state;
@@ -11,16 +14,17 @@ class StateRepeater<T, I, O extends StateOptions = StateOptions> extends StateBa
 
     _valid: boolean = false;
     _buffer: T | undefined;
-    _state: State<I, O> | undefined;
-    _getter: (val: I) => T;
-    _setter: ((val: T) => I) | undefined;
+    _state: StateWrite<I> | undefined;
+    _getter: Getter<T, I> | undefined;
+    _setter: Setter<T, I> | undefined;
 
     _subscriber(value: I) {
-        this._buffer = this._getter(value);
+        this._valid = true;
+        this._buffer = (this._getter ? this._getter(value) : <any>value);
         this.updateSubscribers(this._buffer);
     };
 
-    setAndUpdate(state: State<I, O> | undefined) {
+    _setState(state: StateWrite<I> | undefined) {
         if (this._state) {
             if (this._subscribers.length > 0) {
                 this._state.unsubscribe(this._subscriber);
@@ -53,6 +57,7 @@ class StateRepeater<T, I, O extends StateOptions = StateOptions> extends StateBa
 
     unsubscribe<B extends StateSubscriber<T | undefined>>(func: B): B {
         if (this._subscribers.length === 1 && this._state) {
+            this._valid = false
             this._state.unsubscribe(this._subscriber);
         }
         return this.unsubscribe(func);
@@ -64,47 +69,40 @@ class StateRepeater<T, I, O extends StateOptions = StateOptions> extends StateBa
         }
     }
 
-    get(): T | PromiseLike<T> | undefined {
+    async get(): Promise<T | undefined> {
         if (this._valid) {
             return <T>this._buffer;
         } else if (this._state) {
-            let value = <PromiseLike<I>>this._state.get();
-            if (typeof value.then === 'function') {
-                return value.then(this._getter);
-            } else {
-                return this._getter(<I>value);
-            }
+            return (this._getter ? this._getter(await this._state.get()) : <any>await this._state.get());
         } else {
             return undefined;
         }
     }
 
     async then<TResult1 = T>(func: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        if (this._valid) {
-            return func(<T>this._buffer)
-        } else if (this._state) {
-            return func(this._getter(await this._state));
-        } else {
-            return func(undefined);
-        }
-    }
-
-    async options(): Promise<StateReadSubscribe<O> | undefined> {
-        if (this._state) {
-            return await this._state.options();
-        } else {
-            return undefined;
-        }
+        return func(await this.get());
     }
 }
 
-/**Creates a state which holds a value
- * @param init initial value for state, use undefined to indicate that state does not have a value yet
- * @param setter function called when state value is set via setter, set true let state set it's own value */
-export const createStateRepeater = <T, I, O extends StateOptions = StateOptions>(getter: (val: I) => T, state?: State<I, O>, setter?: (val: T) => I) => {
-    let repeater = new StateRepeater<T, I, O>(getter, state, setter);
+/**Creates a state which repeats the value of another state
+ * @param state the state to repeat
+ * @param getter function used to modify value repeated from state */
+export const createStateRepeater = <T, I>(state?: StateSubscribe<I>, getter?: Getter<T, I>) => {
+    let repeater = new StateRepeaterClass<T, I>(<any>state, getter);
     return {
-        repeater: repeater as State<T>,
-        setState: repeater.setAndUpdate.bind(repeater) as (value: State<I> | undefined) => void,
+        repeater: repeater as StateSubscribe<T>,
+        setState: repeater._setState.bind(repeater) as (value: StateSubscribe<I> | undefined) => void,
+    }
+}
+
+/**Creates a state which repeats the value of another state
+ * @param state the state to repeat
+ * @param getter function used to modify value repeated from state
+ * @param setter function used to modify value repeated to state */
+export const createStateRepeaterWrite = <T, I>(state?: StateWrite<I>, getter?: Getter<T, I>, setter?: Setter<T, I>) => {
+    let repeater = new StateRepeaterClass<T, I>(state, getter, setter);
+    return {
+        repeater: repeater as StateWrite<T>,
+        setState: repeater._setState.bind(repeater) as (value: StateWrite<I> | undefined) => void,
     }
 }
