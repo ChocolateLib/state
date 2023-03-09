@@ -1,16 +1,28 @@
 import { createState, createStateOptions } from "../src";
+import { initSettings } from "./index copy";
 
-let test = async () => {
-    await new Promise((a) => { setTimeout(a, 1) });
-    let { options, set } = createStateOptions({});
-    console.warn(options);
-    return (options)
-}
+let setting = initSettings('test', 'asdf', 'yoyoyo');
 
-test().then((val) => {
-    console.warn(val);
-});
+let { state, set } = await setting.makeBooleanSetting('asdf', (value) => {
+    console.warn(value);
+    set(value);
+}, false, { name: 'Test Setting', description: 'asdf' })
 
-console.warn(await test());
+console.warn(await state);
+window.yo = state;
 
-let { state } = createState(2, undefined)
+// let test = async () => {
+//     await new Promise((a) => { setTimeout(a, 1) });
+//     let { options, set } = createStateOptions({});
+//     console.warn(options);
+//     return (options)
+// }
+
+// test().then((val) => {
+//     console.warn(val);
+// });
+
+// console.warn(await test());
+
+// let { state } = createState(2, undefined)
+

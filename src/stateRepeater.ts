@@ -21,7 +21,7 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements State
     _subscriber(value: I) {
         this._valid = true;
         this._buffer = (this._getter ? this._getter(value) : <any>value);
-        this.updateSubscribers(this._buffer);
+        this._updateSubscribers(this._buffer);
     };
 
     _setState(state: StateWrite<I> | undefined) {
@@ -69,18 +69,14 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements State
         }
     }
 
-    async get(): Promise<T | undefined> {
-        if (this._valid) {
-            return <T>this._buffer;
-        } else if (this._state) {
-            return (this._getter ? this._getter(await this._state.get()) : <any>await this._state.get());
-        } else {
-            return undefined;
-        }
-    }
-
     async then<TResult1 = T>(func: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        return func(await this.get());
+        if (this._valid) {
+            return func(<T>this._buffer);
+        } else if (this._state) {
+            return func((this._getter ? this._getter(await this._state) : <any>await this._state));
+        } else {
+            return func(undefined);
+        }
     }
 }
 

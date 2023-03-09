@@ -1,4 +1,5 @@
-import { Limiter, Value, ValueLimitedNumber, ValueLimitedString, EnumList } from "@chocolatelib/value";
+import { createState, StateWrite } from "../src";
+import { StateSetter } from "../src/shared";
 
 let bottomGroups: { [key: string]: SettingsGroup } = {};
 
@@ -11,10 +12,28 @@ export let initSettings = (packageName: string, name: string, description: strin
     return bottomGroups[packageName];
 }
 
+interface SettingOptions {
+    name: string,
+    description: string,
+    icon?: () => SVGSVGElement,
+}
+
+interface NumberSettingOptions extends SettingOptions {
+    min?: number;
+    max?: number;
+    decimals?: number;
+}
+
+interface EnumSettingOptions extends SettingOptions {
+    min?: number;
+    max?: number;
+    decimals?: number;
+}
+
 /**Group of settings should never be instantiated manually use initSettings*/
 export class SettingsGroup {
     private pathID: string;
-    private settings: { [key: string]: Value<boolean> | ValueLimitedNumber | ValueLimitedString } = {};
+    private settings: { [key: string]: StateWrite<boolean> | StateWrite<number> | StateWrite<string> } = {};
     private subGroups: { [key: string]: SettingsGroup } = {};
     readonly name: string;
     readonly description: string;
@@ -38,75 +57,51 @@ export class SettingsGroup {
         }
     }
 
-    /**Makes a boolean setting
-     * @param id unique identifier for this setting in the group
-     * @param name name of setting formatted for user reading
-     * @param description a description of what the setting group is about formatted for user reading*/
-    makeBooleanSetting(id: string, name: string, description: string, defaultValue: boolean | Promise<boolean>) {
-        if (id in this.settings) {
-            throw new Error('Settings already registered ' + id);
-        }
+    /**Makes a boolean setting*/
+    async makeBooleanSetting(id: string, setter: StateSetter<boolean>, defaultValue: boolean | PromiseLike<boolean>, options: SettingOptions) {
+        if (id in this.settings) { throw new Error('Settings already registered ' + id); }
         let saved = localStorage[this.pathID + '/' + id];
-        if (saved) {
-            var setting = new Value<boolean>(JSON.parse(saved));
-        } else {
-            if (typeof defaultValue === 'boolean') {
-                var setting = new Value<boolean>(defaultValue);
-            } else {
-                var setting = new Value<boolean>(false);
-                defaultValue.then((val) => { setting.set = val });
-            }
-        }
-        setting.info = { name, description };
-        setting.addListener((val) => { localStorage[this.pathID + '/' + id] = JSON.stringify(val); }, !saved)
-        return this.settings[id] = setting;
+        let value = (saved ? JSON.parse(saved) : await defaultValue);
+        if (!saved) { localStorage[this.pathID + '/' + id] = String(value); }
+        return createState(value, (value) => {
+            setter(value);
+            localStorage[this.pathID + '/' + id] = String(value);
+        }, options);
     }
 
-    /**Makes a number setting
-     * @param id unique identifier for this setting in the group
-     * @param name name of setting formatted for user reading
-     * @param description a description of what the setting group is about formatted for user reading*/
-    makeNumberSetting(id: string, name: string, description: string, defaultValue: number | Promise<number>, min?: number, max?: number, step?: number, limiters?: Limiter<number>[]) {
-        if (id in this.settings) {
-            throw new Error('Settings already registered ' + id);
-        }
+    /**Makes a number setting*/
+    async makeNumberSetting(id: string, setter: StateSetter<number>, defaultValue: number | PromiseLike<number>, options: NumberSettingOptions) {
+        if (id in this.settings) { throw new Error('Settings already registered ' + id); }
         let saved = localStorage[this.pathID + '/' + id];
-        if (saved) {
-            var setting = new ValueLimitedNumber(JSON.parse(saved), min, max, step, limiters);
-        } else {
-            if (typeof defaultValue === 'number') {
-                var setting = new ValueLimitedNumber(defaultValue, min, max, step, limiters);
-            } else {
-                var setting = new ValueLimitedNumber(NaN, min, max, step, limiters);
-                defaultValue.then((val) => { setting.set = val });
-            }
-        }
-        setting.info = { name, description };
-        setting.addListener((val) => { localStorage[this.pathID + '/' + id] = JSON.stringify(val); }, !saved)
-        return this.settings[id] = setting;
+        let value = (saved ? JSON.parse(saved) : await defaultValue);
+        if (!saved) { localStorage[this.pathID + '/' + id] = String(value); }
+        return createState(value, (value) => {
+            setter(value);
+            localStorage[this.pathID + '/' + id] = String(value);
+        }, options);
     }
 
-    /**Makes a string setting
-     * @param id unique identifier for this setting in the group
-     * @param name name of setting formatted for user reading
-     * @param description a description of what the setting group is about formatted for user reading*/
-    makeStringSetting(id: string, name: string, description: string, defaultValue: string | Promise<string>, enums?: EnumList, maxLength?: number, maxByteLength?: number, limiters?: Limiter<string>[]) {
-        if (id in this.settings) {
-            throw new Error('Settings already registered ' + id);
-        }
+    /**Makes a string setting*/
+    async makeStringSetting(id: string, setter: StateSetter<string>, defaultValue: string | PromiseLike<string>, options: SettingOptions) {
+        if (id in this.settings) { throw new Error('Settings already registered ' + id); }
         let saved = localStorage[this.pathID + '/' + id];
-        if (saved) {
-            var setting = new ValueLimitedString(JSON.parse(saved), enums, maxLength, maxByteLength, limiters);
-        } else {
-            if (typeof defaultValue === 'string') {
-                var setting = new ValueLimitedString(defaultValue, enums, maxLength, maxByteLength, limiters);
-            } else {
-                var setting = new ValueLimitedString('', enums, maxLength, maxByteLength, limiters);
-                defaultValue.then((val) => { setting.set = val });
-            }
-        }
-        setting.info = { name, description };
-        setting.addListener((val) => { localStorage[this.pathID + '/' + id] = JSON.stringify(val); }, !saved)
-        return this.settings[id] = setting;
+        let value = (saved ? JSON.parse(saved) : await defaultValue);
+        if (!saved) { localStorage[this.pathID + '/' + id] = value; }
+        return createState(value, (value) => {
+            setter(value);
+            localStorage[this.pathID + '/' + id] = value;
+        }, options);
+    }
+
+    /**Makes a enum setting*/
+    async makeEnumSetting(id: string, setter: StateSetter<string>, defaultValue: string | PromiseLike<string>, options: SettingOptions) {
+        if (id in this.settings) { throw new Error('Settings already registered ' + id); }
+        let saved = localStorage[this.pathID + '/' + id];
+        let value = (saved ? JSON.parse(saved) : await defaultValue);
+        if (!saved) { localStorage[this.pathID + '/' + id] = value; }
+        return createState(value, (value) => {
+            setter(value);
+            localStorage[this.pathID + '/' + id] = value;
+        }, options);
     }
 }

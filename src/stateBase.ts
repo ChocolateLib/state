@@ -18,7 +18,7 @@ export abstract class StateBase<T> implements StateSubscribe<T>{
         return func;
     }
 
-    updateSubscribers(value: T): void {
+    _updateSubscribers(value: T): void {
         for (let i = 0, m = this._subscribers.length; i < m; i++) {
             try {
                 this._subscribers[i](value);
@@ -27,8 +27,6 @@ export abstract class StateBase<T> implements StateSubscribe<T>{
             }
         }
     }
-
-    abstract get(): PromiseLike<T>
 
     abstract then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1 | TResult2>
 }

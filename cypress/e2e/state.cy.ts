@@ -39,11 +39,7 @@ describe('Setting state value', function () {
     });
 });
 
-describe('Getting state value', function () {
-    it('Using get', async function () {
-        let { state, set } = createState(2);
-        expect(state.get()).equal(2);
-    });
+describe('Getting state value', async function () {
     it('Using await', async function () {
         let { state, set } = createState(2);
         expect(await state).equal(2);
@@ -153,8 +149,8 @@ describe('Value subscriber', function () {
 
 
 describe('Options', function () {
-    it('Initial options set', function () {
-        let { state, set, options } = createState(2, undefined, createStateOptions({ name: 'Test', description: '', writeable: false, }).options);
-        expect(state.options()).equal(options);
+    it('Initial options set', async function () {
+        let { state, set } = createState(2, undefined, createStateOptions({ name: 'Test', description: '', writeable: false, }).options);
+        expect(await state.options()).deep.equal({ name: 'Test', description: '', writeable: false, });
     });
 });

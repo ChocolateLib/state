@@ -9,12 +9,11 @@ export class StateOptionsClass<T> extends StateBase<T> {
         }
     }
     options: T | undefined;
-    optionsFunc: (() => PromiseLike<T>) | undefined;
     externalSetter: StateSetter<T> | undefined;
 
     setAndUpdate(value: T) {
         this.options = { ...this.options, ...value };
-        this.updateSubscribers(value);
+        this._updateSubscribers(value);
     }
 
     subscribe<B extends StateSubscriber<T>>(func: B, update?: boolean): B {
@@ -28,23 +27,13 @@ export class StateOptionsClass<T> extends StateBase<T> {
         return super.subscribe(func);
     }
 
-    async get(): Promise<T> {
-        if (this.optionsFunc) {
-            this.options = await this.optionsFunc();
-            delete this.optionsFunc;
-            return this.options;
-        } else {
-            return <T>this.options;
-        }
-    }
-
     async then<TResult1 = T>(func: ((value: T) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        return func(await this.get());
+        return func(<T>this.options);
     }
 }
 
 /**Creates a state which holds options for another state*/
-export const createStateOptions = <T extends StateOptions = StateOptions>(init: T | (() => PromiseLike<T>)) => {
+export const createStateOptions = <T extends StateOptions = StateOptions>(init: T) => {
     let options = new StateOptionsClass<T>(init);
     return {
         options: options as StateSubscribe<T>,

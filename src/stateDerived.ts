@@ -1,4 +1,4 @@
-import { StateSubscriber, StateWrite, StateSubscribe } from "./shared";
+import { StateSubscriber, StateSubscribe } from "./shared";
 import { StateBase } from "./stateBase";
 
 type Getter<T, I> = (value: I[]) => T
@@ -7,41 +7,63 @@ class StateDerivedClass<T, I> extends StateBase<T | undefined> {
     constructor(getter: Getter<T, I>, states?: StateSubscribe<I>[]) {
         super();
         this._getter = getter;
-        this._states = states;
+        if (states) {
+            this._states = [...states];
+        }
     }
 
     _valid: boolean = false;
     _buffer: T | undefined;
-    _states: StateSubscribe<I>[] | undefined;
+    _states: StateSubscribe<I>[] = [];
     _stateBuffers: I[] = [];
     _stateSubscribers: StateSubscriber<I>[] = [];
     _getter: Getter<T, I>;
+    _gettingValue: boolean = false;
 
-    _subscriber(value: I) {
-        this._buffer = this._getter(value);
-        this.updateSubscribers(this._buffer);
-    };
-
-    setStates(state: StateSubscribe<I> | undefined) {
-        if (this._states) {
-            if (this._subscribers.length > 0) {
-                this._states.unsubscribe(this._subscriber);
-            }
-            if (!state) {
-                this._states = undefined;
-            }
+    _connect() {
+        for (let i = 0; i < this._states.length; i++) {
+            this._stateSubscribers[i] = this._states[i].subscribe((val) => {
+                this._stateBuffers[i] = val;
+                if (!this._gettingValue) {
+                    this._gettingValue = true;
+                    (async () => {
+                        await undefined;
+                        this._buffer = this._getter(this._stateBuffers);
+                        this._updateSubscribers(this._buffer)
+                        this._gettingValue = false;
+                    })();
+                }
+            });
         }
-        if (state) {
+    }
+
+    _disconnect() {
+        if (this._states) {
+
+        }
+        for (let i = 0; i < this._states.length; i++) {
+            this._states[i].unsubscribe(this._stateSubscribers[i]);
+        }
+        this._stateSubscribers = [];
+    }
+
+    setStates(states: StateSubscribe<I>[] | undefined) {
+        if (this._subscribers.length) {
+            this._disconnect();
+        }
+        if (states) {
+            this._states = [...states];
             if (this._subscribers.length) {
-                this._subscriber = state.subscribe(this._subscriber.bind(this), true);
+                this._connect();
             }
-            this._states = state;
+        } else {
+            this._states = [];
         }
     }
 
     subscribe<B extends StateSubscriber<T | undefined>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0 && this._states) {
-            this._states.subscribe(this._subscriber.bind(this), update);
+            this._connect();
         }
         if (update) {
             try {
@@ -54,30 +76,26 @@ class StateDerivedClass<T, I> extends StateBase<T | undefined> {
     }
 
     unsubscribe<B extends StateSubscriber<T | undefined>>(func: B): B {
-        if (this._subscribers.length === 1 && this._states) {
-            this._states.unsubscribe(this._subscriber);
+        if (this._subscribers.length === 1) {
+            this._disconnect();
         }
         return this.unsubscribe(func);
     }
 
-    async get(): Promise<T | undefined> {
-        if (this._valid) {
-            return <T>this._buffer;
-        } else if (this._states) {
-            return this._getter(await Promise.all(this._states));
-        } else {
-            return undefined;
-        }
-    }
-
     async then<TResult1 = T>(func: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        return func(await this.get());
+        if (this._valid) {
+            return func(<T>this._buffer);
+        } else if (this._states) {
+            return func(this._getter(await Promise.all(this._states)));
+        } else {
+            return func(undefined);
+        }
     }
 }
 
 /**Creates a state which holds a value
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
- * @param setter function called when state value is set via setter, set true let state set it's own value */
+ * @param getter function called when state value is set via setter, set true let state set it's own value */
 export const createStateDerived = <T, I>(getter: Getter<T, I>, states?: StateSubscribe<I>[]) => {
     let repeater = new StateDerivedClass<T, I>(getter, states);
     return {

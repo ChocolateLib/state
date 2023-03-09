@@ -8,8 +8,6 @@ export interface StateOptions {
 export type StateSubscriber<T> = (val: T) => void
 
 export interface StateRead<T> extends PromiseLike<T> {
-    /** This sets the value of the state and updates all subscribers*/
-    get(): PromiseLike<T>
     /**Makes the state awaitable */
     then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2>
 }
