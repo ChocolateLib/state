@@ -1,4 +1,4 @@
-import { State, StateUserSet, StateSubscriber, StateOptions, StateSubscribe, StateSetter, StateNumberOptions, StateStringOptions, StateEnumOptions, StateEnumList } from "./shared";
+import { State, StateUserSet, StateSubscriber, StateOptions, StateSubscribe, StateSetter, StateNumberOptions, StateStringOptions, StateEnumOptions } from "./shared";
 import { StateBase } from "./stateBase";
 import { createStateOptions, StateOptionsClass } from "./stateOptions";
 
@@ -72,20 +72,3 @@ export const createStateNumber = (createState as typeof createState<number, Stat
 
 /**Creates a state which holds a string value*/
 export const createStateString = (createState as typeof createState<string, StateStringOptions>)
-
-/**Creates a state enum
- * 
- * 
-*/
-export const createStateEnum = createState as (<O extends StateEnumList, T = keyof O>(init: T, setter?: boolean | StateUserSet<T> | undefined, options?: StateEnumOptions<O> | StateSubscribe<StateEnumOptions<O>> | undefined) => {
-    state: State<T, StateEnumOptions<O>>;
-    set: StateSetter<T>;
-})
-
-type test = { yo: {} }
-
-let ass = { asdf: { name: '' }, 'test2': { name: '' } }
-
-let asdf = createStateEnum('asdf', () => { }, { enums: ass })
-
-let yo = await asdf.state

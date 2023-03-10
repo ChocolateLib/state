@@ -1,4 +1,4 @@
-import { StateOptions, StateSetter, StateSubscribe, StateSubscriber } from "./shared";
+import { StateOptions, StateUserSet, StateSubscribe, StateSubscriber } from "./shared";
 import { StateBase } from "./stateBase";
 
 export class StateOptionsClass<T> extends StateBase<T> {
@@ -9,7 +9,7 @@ export class StateOptionsClass<T> extends StateBase<T> {
         }
     }
     options: T | undefined;
-    externalSetter: StateSetter<T> | undefined;
+    externalSetter: StateUserSet<T> | undefined;
 
     setAndUpdate(value: T) {
         this.options = { ...this.options, ...value };

@@ -1,3 +1,3 @@
-export { createState } from "./state";
 export { createStateOptions } from "./stateOptions";
-export type { State, StateRead, StateWrite, StateSubscribe, StateOptions } from "./shared";
+export { createState, createStateBoolean, createStateNumber, createStateString } from "./state";
+export type { State, StateRead, StateWrite, StateSubscribe, StateOptions, StateUserSet, StateSetter, StateNumberOptions, StateStringOptions, StateEnumEntry, StateEnumList, StateEnumOptions } from "./shared";

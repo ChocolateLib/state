@@ -5,6 +5,41 @@ export interface StateOptions {
     writable?: boolean,
 };
 
+//NUMBER
+export interface StateNumberStep {
+    /**Size of steps, eg 2 means 2,4,6,8 are allowed*/
+    size: number,
+    /**Step start, eg with size 1 and start 0.2, 0.2,1.2,2.2 are allowed */
+    start?: number,
+}
+
+export interface StateNumberOptions extends StateOptions {
+    min?: number;
+    max?: number;
+    decimals?: number;
+    step?: StateNumberStep;
+}
+
+//STRING
+export interface StateStringOptions extends StateOptions { }
+
+//ENUM
+export type StateEnumEntry = {
+    name: string,
+    description?: string,
+    icon?: () => SVGSVGElement,
+}
+
+export type StateEnumList = {
+    [key: string | number]: StateEnumEntry
+}
+
+export interface StateEnumOptions<T extends StateEnumList> extends StateOptions {
+    enums: T,
+}
+
+
+
 export type StateSubscriber<T> = (val: T) => void
 
 export interface StateRead<T> extends PromiseLike<T> {
@@ -31,6 +66,8 @@ export interface State<T, O extends StateOptions = StateOptions> extends StateWr
 }
 
 
-/**Function used to check set value for state */
-export type StateSetter<T> = (value: T) => void
+/**Function called when user sets value*/
+export type StateUserSet<T> = (value: T, set: (value: T) => void) => void
 
+/**Function used to change value of state by owner*/
+export type StateSetter<T> = (value: T) => void

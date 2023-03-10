@@ -1,0 +1,101 @@
+@mixin scrollbar {
+    &::-webkit-scrollbar {
+        width: calc(var(--scrollbar));
+        height: calc(var(--scrollbar));
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbarColor);
+        border-radius: 100vh;
+        border: calc(var(--scrollbar) / 6) solid transparent;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background-color: var(--scrollbarHoverColor);
+        border: calc(var(--scrollbar) / 6) solid transparent;
+    }
+
+    &::-webkit-scrollbar-thumb:active {
+        background-color: var(--scrollbarActiveColor);
+        border: calc(var(--scrollbar) / 6) solid transparent;
+    }
+
+    &::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-button:vertical:start:increment,
+    &::-webkit-scrollbar-button:vertical:end:decrement,
+    &::-webkit-scrollbar-button:horizontal:start:increment,
+    &::-webkit-scrollbar-button:horizontal:end:decrement,
+    &::-webkit-scrollbar-button:vertical:end:increment,
+    &::-webkit-scrollbar-button:vertical:start:decrement,
+    &::-webkit-scrollbar-button:horizontal:end:increment,
+    &::-webkit-scrollbar-button:horizontal:start:decrement {
+        display: none;
+    }
+}
+
+
+
+
+
+// .scrollModern & {
+//     ::-webkit-scrollbar {
+//         width: $scrollBarBasisModern;
+//         height: $scrollBarBasisModern;
+//     }
+
+//     ::-webkit-scrollbar-thumb {
+//         border-width: 0.15rem;
+//     }
+
+//     ::-webkit-scrollbar-thumb {
+//         min-width: $scrollBarBasisModern + 1rem;
+//         min-height: $scrollBarBasisModern + 1rem;
+//     }
+
+//     scrollbar-width: thin;
+// }
+
+// .scrollNormal & {
+//     ::-webkit-scrollbar {
+//         width: $scrollBarBasisNormal;
+//         height: $scrollBarBasisNormal;
+//     }
+
+//     ::-webkit-scrollbar-thumb {
+//         min-width: $scrollBarBasisNormal + 1rem;
+//         min-height: $scrollBarBasisNormal + 1rem;
+//     }
+// }
+
+// .scrollLarge & {
+//     ::-webkit-scrollbar {
+//         width: $scrollBarBasisLarge;
+//         height: $scrollBarBasisLarge;
+//     }
+
+//     ::-webkit-scrollbar-button {
+//         width: $scrollBarBasisLarge;
+//         height: $scrollBarBasisLarge;
+//         background-color: var(--scrollBarColor);
+//         border-radius: 50%;
+//         border: 0.2rem solid var(--contentBackGround);
+//         -webkit-background-clip: padding-box;
+//         background-clip: padding-box;
+//     }
+
+//     ::-webkit-scrollbar-button:hover {
+//         background: var(--scrollBarHover);
+//     }
+
+//     ::-webkit-scrollbar-thumb {
+//         min-width: $scrollBarBasisLarge + 1rem;
+//         min-height: $scrollBarBasisLarge + 1rem;
+//     }
+
+
+// }
