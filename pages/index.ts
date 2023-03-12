@@ -1,10 +1,11 @@
-import { createState, createStateOptions } from "../src";
+import { createState } from "../src";
 import { createDocumentHandler } from "./document";
 import { initSettings } from "./settings";
 import { createThemeEngine } from "./theme";
 
 let { handler } = createDocumentHandler(document);
 let { engine } = createThemeEngine(handler);
+
 
 
 

@@ -45,7 +45,7 @@ export class SettingsGroup {
         if (saved) {
             setter(<T>JSON.parse(saved))
         }
-        state.subscribe((value) => { localStorage[this.pathID + '/' + id] = String(value); })
+        state.subscribe((value) => { localStorage[this.pathID + '/' + id] = JSON.stringify(value); }, !saved)
         this.settings[id] = state;
     }
 }

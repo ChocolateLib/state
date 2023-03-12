@@ -1,22 +1,18 @@
-import { StateSubscribe, StateSubscriber, StateWrite } from "./shared";
 import { StateBase } from "./stateBase";
+import { StateRead, StateSubscriber } from "./types";
 
 type Getter<T, I> = (value: I) => T
-type Setter<T, I> = (value: T) => I
 
-class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements StateWrite<T | undefined> {
-    constructor(state?: StateWrite<I>, getter?: Getter<T, I>, setter?: Setter<T, I>) {
+class StateRepeaterClass<T, I> extends StateBase<T | undefined> {
+    constructor(state?: StateRead<I>) {
         super();
-        this._getter = getter;
         this._state = state;
-        this._setter = setter;
     }
 
     _valid: boolean = false;
     _buffer: T | undefined;
-    _state: StateWrite<I> | undefined;
+    _state: StateRead<I> | undefined;
     _getter: Getter<T, I> | undefined;
-    _setter: Setter<T, I> | undefined;
 
     _subscriber(value: I) {
         this._valid = true;
@@ -24,7 +20,7 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements State
         this._updateSubscribers(this._buffer);
     };
 
-    _setState(state: StateWrite<I> | undefined) {
+    _setState(state: StateRead<I> | undefined) {
         if (this._state) {
             if (this._subscribers.length > 0) {
                 this._state.unsubscribe(this._subscriber);
@@ -43,16 +39,9 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements State
 
     subscribe<B extends StateSubscriber<T | undefined>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0 && this._state) {
-            this._state.subscribe(this._subscriber.bind(this), update);
+            this._state.subscribe(this._subscriber.bind(this));
         }
-        if (update) {
-            try {
-                this.then(func);
-            } catch (error) {
-                console.warn('Failed while calling update function', this, func);
-            }
-        }
-        return super.subscribe(func);
+        return super.subscribe(func, update);
     }
 
     unsubscribe<B extends StateSubscriber<T | undefined>>(func: B): B {
@@ -61,12 +50,6 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements State
             this._state.unsubscribe(this._subscriber);
         }
         return this.unsubscribe(func);
-    }
-
-    set(value: T): void {
-        if (this._setter && this._state) {
-            this._state.set(this._setter(value));
-        }
     }
 
     async then<TResult1 = T>(func: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
@@ -83,22 +66,13 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> implements State
 /**Creates a state which repeats the value of another state
  * @param state the state to repeat
  * @param getter function used to modify value repeated from state */
-export const createStateRepeater = <T, I>(state?: StateSubscribe<I>, getter?: Getter<T, I>) => {
-    let repeater = new StateRepeaterClass<T, I>(<any>state, getter);
-    return {
-        repeater: repeater as StateSubscribe<T>,
-        setState: repeater._setState.bind(repeater) as (value: StateSubscribe<I> | undefined) => void,
+export const createStateRepeater = <T, I>(state?: StateRead<I>, getter?: Getter<T, I>) => {
+    let repeater = new StateRepeaterClass<T, I>(state);
+    if (getter) {
+        repeater._getter = getter;
     }
-}
-
-/**Creates a state which repeats the value of another state
- * @param state the state to repeat
- * @param getter function used to modify value repeated from state
- * @param setter function used to modify value repeated to state */
-export const createStateRepeaterWrite = <T, I>(state?: StateWrite<I>, getter?: Getter<T, I>, setter?: Setter<T, I>) => {
-    let repeater = new StateRepeaterClass<T, I>(state, getter, setter);
     return {
-        repeater: repeater as StateWrite<T>,
-        setState: repeater._setState.bind(repeater) as (value: StateWrite<I> | undefined) => void,
+        repeater: repeater as StateRead<T>,
+        setState: repeater._setState.bind(repeater) as (value: StateRead<I> | undefined) => void,
     }
 }

@@ -1,14 +1,21 @@
-import { StateSubscribe, StateSubscriber } from "./shared";
+import { StateRead, StateSubscriber } from "./types";
 
-export abstract class StateBase<T> implements StateSubscribe<T>{
-    _subscribers: StateSubscriber<T>[] = [];
+export abstract class StateBase<R> implements StateRead<R>{
+    _subscribers: StateSubscriber<R>[] = [];
 
-    subscribe<B extends StateSubscriber<T>>(func: B): B {
+    subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
         this._subscribers.push(func);
+        if (update) {
+            try {
+                this.then(func);
+            } catch (error) {
+                console.warn('Failed while calling update function', this, func);
+            }
+        }
         return func;
     }
 
-    unsubscribe<B extends StateSubscriber<T>>(func: B): B {
+    unsubscribe<B extends StateSubscriber<R>>(func: B): B {
         const index = this._subscribers.indexOf(func);
         if (index != -1) {
             this._subscribers.splice(index, 1);
@@ -18,7 +25,7 @@ export abstract class StateBase<T> implements StateSubscribe<T>{
         return func;
     }
 
-    _updateSubscribers(value: T): void {
+    _updateSubscribers(value: R): void {
         for (let i = 0, m = this._subscribers.length; i < m; i++) {
             try {
                 this._subscribers[i](value);
@@ -28,7 +35,7 @@ export abstract class StateBase<T> implements StateSubscribe<T>{
         }
     }
 
-    abstract then<TResult1 = T, TResult2 = never>(onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1 | TResult2>
+    abstract then<TResult1 = R, TResult2 = never>(onfulfilled: ((value: R) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1 | TResult2>
 }
 
 /**Checks if a variable is an instance of a state*/

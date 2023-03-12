@@ -1,10 +1,10 @@
-import { StateSubscriber, StateSubscribe } from "./shared";
+import { StateSubscriber, StateRead } from "./types";
 import { StateBase } from "./stateBase";
 
 type Getter<T, I> = (value: I[]) => T
 
 class StateDerivedClass<T, I> extends StateBase<T | undefined> {
-    constructor(getter: Getter<T, I>, states?: StateSubscribe<I>[]) {
+    constructor(getter: Getter<T, I>, states?: StateRead<I>[]) {
         super();
         this._getter = getter;
         if (states) {
@@ -14,7 +14,7 @@ class StateDerivedClass<T, I> extends StateBase<T | undefined> {
 
     _valid: boolean = false;
     _buffer: T | undefined;
-    _states: StateSubscribe<I>[] = [];
+    _states: StateRead<I>[] = [];
     _stateBuffers: I[] = [];
     _stateSubscribers: StateSubscriber<I>[] = [];
     _getter: Getter<T, I>;
@@ -47,7 +47,7 @@ class StateDerivedClass<T, I> extends StateBase<T | undefined> {
         this._stateSubscribers = [];
     }
 
-    setStates(states: StateSubscribe<I>[] | undefined) {
+    setStates(states: StateRead<I>[] | undefined) {
         if (this._subscribers.length) {
             this._disconnect();
         }
@@ -93,13 +93,42 @@ class StateDerivedClass<T, I> extends StateBase<T | undefined> {
     }
 }
 
-/**Creates a state which holds a value
+/**Creates a state derives a value from other states
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
  * @param getter function called when state value is set via setter, set true let state set it's own value */
-export const createStateDerived = <T, I>(getter: Getter<T, I>, states?: StateSubscribe<I>[]) => {
+export const createStateDerived = <T, I>(getter: Getter<T, I>, states?: StateRead<I>[]) => {
     let repeater = new StateDerivedClass<T, I>(getter, states);
     return {
-        repeater: repeater as StateSubscribe<T>,
-        setStates: repeater.setStates.bind(repeater) as (value: StateSubscribe<I>[] | undefined) => void,
+        repeater: repeater as StateRead<T>,
+        setStates: repeater.setStates.bind(repeater) as (value: StateRead<I>[] | undefined) => void,
+    }
+}
+
+/**Creates a state which keeps the avererage of the value of other states*/
+export const createStateAverager = (states?: StateRead<number>[]) => {
+    let repeater = new StateDerivedClass<number, number>((values) => {
+        let sum = 0;
+        for (let i = 0; i < values.length; i++) {
+            sum += values[i];
+        }
+        return sum / values.length;
+    }, states);
+    return {
+        repeater: repeater as StateRead<number>,
+        setStates: repeater.setStates.bind(repeater) as (value: StateRead<number>[] | undefined) => void,
+    }
+}
+/**Creates a state which keeps the sum of the value of other states*/
+export const createStateSummer = (states?: StateRead<number>[]) => {
+    let repeater = new StateDerivedClass<number, number>((values) => {
+        let sum = 0;
+        for (let i = 0; i < values.length; i++) {
+            sum += values[i];
+        }
+        return sum;
+    }, states);
+    return {
+        repeater: repeater as StateRead<number>,
+        setStates: repeater.setStates.bind(repeater) as (value: StateRead<number>[] | undefined) => void,
     }
 }

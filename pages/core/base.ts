@@ -1,7 +1,7 @@
 import "./base.scss"
-import { EListener, EventHandler } from "@chocolatelib/events";
+import { EListener, EventHandler } from "../events";
 import { BaseObserver } from "./observer";
-import { Listener, Value } from "@chocolatelib/value";
+import { StateSubscriber, StateSubscribe } from "../../src";
 import { Access, AccessTypes } from "./access";
 
 /**Event types for base*/
@@ -51,8 +51,8 @@ export abstract class Base<MoreEvents extends BaseEvents = BaseEvents> extends H
     static elementName() { return '@abstract@'; }
     /**Returns the namespace override for the element*/
     static elementNameSpace() { return 'chocolatelibui-core'; }
-    /**List of attached Values */
-    private $values: Value<any>[] | undefined
+    /**List of attached States */
+    private $values: StateSubscribe<any>[] | undefined
     /**List of functions for attached values */
     private $valueFuncs: ((value: any) => void)[] | undefined
     /**Function for connecting values */
@@ -60,9 +60,8 @@ export abstract class Base<MoreEvents extends BaseEvents = BaseEvents> extends H
     /**Access of element*/
     protected $access: AccessTypes = AccessTypes.write
     /**Access listener*/
-    private $accessListener: Listener<AccessTypes> | undefined
+    private $accessListener: StateSubscriber<AccessTypes> | undefined
 
-    //@ts-expect-error
     constructor(...any: any[]) {
         super()
         this.events.target = this;
@@ -129,7 +128,7 @@ export abstract class Base<MoreEvents extends BaseEvents = BaseEvents> extends H
     /**Attaches a Value to the element, which will automatically have the function connected with the element
      * a function cannot be attached with multiple values, if done it will throw
      * a Value can be attached with multiple different functions */
-    attachValue<T>(value: Value<T>, func: (value: T) => void) {
+    attachValue<T>(value: StateSubscribe<T>, func: (value: T) => void) {
         if (this.$valueFuncs) {
             if (this.$valueFuncs.includes(func)) {
                 throw 'Function is already attached to this element';
@@ -140,25 +139,24 @@ export abstract class Base<MoreEvents extends BaseEvents = BaseEvents> extends H
         }
         if (this.$valueConnector) {
             if (this.isVisible) {
-                value.addListener(func);
+                value.subscribe(func);
             }
         } else {
             this.$valueConnector = this.events.on('connect', (e) => {
                 switch (e.data) {
                     case ConnectEventVal.Connect:
                         for (let i = 0; i < this.$values!.length; i++) {
-                            this.$values![i].addListener(this.$valueFuncs![i], true);
+                            this.$values![i].subscribe(this.$valueFuncs![i], true);
                         }
                         break;
                     case ConnectEventVal.Disconnect:
                         for (let i = 0; i < this.$values!.length; i++) {
-                            this.$values![i].removeListener(this.$valueFuncs![i]);
+                            this.$values![i].unsubscribe(this.$valueFuncs![i]);
                         }
                         break;
                     case ConnectEventVal.Adopted:
                         for (let i = 0; i < this.$values!.length; i++) {
-                            this.$values![i].removeListener(this.$valueFuncs![i]);
-                            this.$values![i].addListener(this.$valueFuncs![i], true);
+                            this.$values![i].then(this.$valueFuncs![i]);
                         }
                 }
             })
@@ -173,7 +171,7 @@ export abstract class Base<MoreEvents extends BaseEvents = BaseEvents> extends H
             let index = this.$valueFuncs.indexOf(func);
             if (index > -1) {
                 if (this.isVisible) {
-                    this.$values![index].removeListener(func);
+                    this.$values![index].unsubscribe(func);
                 }
                 this.$values!.splice(index, 1);
                 this.$valueFuncs.splice(index, 1);
@@ -194,7 +192,7 @@ export abstract class Base<MoreEvents extends BaseEvents = BaseEvents> extends H
             this.dettachValue(this.$accessListener);
             delete this.$accessListener;
         }
-        if (typeof access === 'object' && access instanceof Access) {
+        if (typeof access === 'object') {
             this.$accessListener = this.attachValue(access, (acc) => {
                 this.$accessChange(<AccessTypes>acc);
                 this.$access = <AccessTypes>acc;

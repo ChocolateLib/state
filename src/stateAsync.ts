@@ -1,20 +1,37 @@
 import { StateBase } from "./stateBase";
-import { StateWrite, StateChecker, StateLimiter, StateSetter, StateUserSet } from "./types";
+import { StateWrite, StateChecker, StateLimiter, StateUserSet, StateSubscriber } from "./types";
 
-export class StateClass<R, W extends R> extends StateBase<R> implements StateWrite<R, W> {
+export class StateAsyncClass<R, W extends R> extends StateBase<R> implements StateWrite<R, W> {
     constructor(init: R) {
         super();
         this._value = init;
     }
 
     _value: R;
-    _setter: StateUserSet<W> | undefined;
-    _check: StateChecker<W> | undefined;
-    _limit: StateLimiter<W> | undefined;
+    _valid: boolean = false;
 
-    setAndUpdate(value: R) {
+    _setter: StateUserSet<T> | undefined;
+    _check: StateChecker<T> | undefined;
+    _limit: StateLimiter<T> | undefined;
+
+    setAndUpdate(value: T) {
         this._value = value;
         this._updateSubscribers(value);
+    }
+
+    subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
+        if (this._subscribers.length === 0) {
+            this._state.subscribe(this._subscriber.bind(this));
+        }
+        return super.subscribe(func, update);
+    }
+
+    unsubscribe<B extends StateSubscriber<R>>(func: B): B {
+        if (this._subscribers.length === 1 && this._state) {
+            this._valid = false
+            this._state.unsubscribe(this._subscriber);
+        }
+        return this.unsubscribe(func);
     }
 
     async then<TResult1 = R>(func: ((value: R) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
@@ -38,13 +55,16 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateWri
     }
 }
 
-/**Creates a state which holds a value
+/**Creates a state which connects to an async source
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
+ * @param once function called when state value is requested once, the function should throw if it fails to get data
+ * @param setup function called when state is being used to setup live update of value
+ * @param teardown function called when state is no longer being used to teardown/cleanup communication
  * @param setter function called when state value is set via setter, set true let state set it's own value 
  * @param checker function to allow state users to check if a given value is valid for the state
  * @param limiter function to allow state users to limit a given value to state limit */
-export const createState = <R, W extends R>(init: R, setter?: StateUserSet<W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
-    let state = new StateClass<R, W>(init);
+export const createStateAsync = <R, W extends R>(init: R, setter?: StateUserSet<T> | boolean, checker?: StateChecker<T>, limiter?: StateLimiter<T>) => {
+    let state = new StateAsyncClass<R, W>(init);
     if (setter) {
         state._setter = (setter === true ? state.setAndUpdate : setter);
     }
@@ -54,8 +74,5 @@ export const createState = <R, W extends R>(init: R, setter?: StateUserSet<W> | 
     if (limiter) {
         state._limit = limiter;
     }
-    return {
-        state: state as StateWrite<R, W>,
-        set: state.setAndUpdate.bind(state) as StateSetter<R>
-    }
+    return { state: state as StateWrite<R, W> }
 }

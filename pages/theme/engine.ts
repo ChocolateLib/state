@@ -1,11 +1,10 @@
 
 import { initSettings } from "../settings"
 import { DocumentHandler } from "../document";
-import { createStateNumber, State, StateEnumList, StateEnumOptions, StateNumberOptions } from "../../src";
+import { createState, StateWrite, StateEnumList } from "../../src";
 import { bottomGroups, DefaultThemes, engines } from "./shared";
 import { EListener } from "../events";
 import { material_hardware_mouse_rounded, material_image_edit_rounded, material_action_touch_app_rounded, material_device_light_mode_rounded, material_device_dark_mode_rounded } from "@chocolatelibui/icons";
-import { createStateEnum } from "../../src/state";
 
 let settings = initSettings("@chocolatelibui/theme", 'Theme/UI', 'Settings for UI elements and and color themes');
 
@@ -19,7 +18,7 @@ let scrollbarMode = {
     [ScrollbarMode.THIN]: { name: 'Thin', description: "Thin modern scrollbar" },
     [ScrollbarMode.MEDIUM]: { name: 'Medium', description: "Normal scrollbar" },
     [ScrollbarMode.WIDE]: { name: 'Wide', description: "Large touch friendly scrollbar" },
-}
+} satisfies StateEnumList
 
 export const enum AnimationMode {
     ALL = 'all',
@@ -33,7 +32,7 @@ let animationMode = {
     [AnimationMode.MOST]: { name: 'Most', description: "All but the heaviest animations" },
     [AnimationMode.SOME]: { name: 'Some', description: "Only the lightest animations" },
     [AnimationMode.NONE]: { name: 'None', description: "No animations" },
-}
+} satisfies StateEnumList
 
 export const enum AutoThemeMode {
     Off = 'off',
@@ -43,11 +42,11 @@ export const enum AutoThemeMode {
 let autoThemeMode = {
     [AutoThemeMode.Off]: { name: 'Off', description: "Mouse input" },
     [AutoThemeMode.OS]: { name: 'OS Linked', description: "Pen input" },
-}
+} satisfies StateEnumList
 let themes = {
     [DefaultThemes.Light]: { name: 'Light', description: "Don't set touch mode automatically", icon: material_device_light_mode_rounded },
     [DefaultThemes.Dark]: { name: 'Dark', description: "Change touch mode on first ui interaction", icon: material_device_dark_mode_rounded },
-}
+} satisfies StateEnumList
 
 export const enum InputMode {
     MOUSE = 'mouse',
@@ -58,7 +57,7 @@ let inputMode = {
     [InputMode.MOUSE]: { name: 'Mouse', description: "Mouse input", icon: material_hardware_mouse_rounded },
     [InputMode.PEN]: { name: 'Pen', description: "Pen input", icon: material_image_edit_rounded },
     [InputMode.TOUCH]: { name: 'Touch', description: "Touch input", icon: material_action_touch_app_rounded }
-}
+} satisfies StateEnumList
 
 export const enum AutoInputMode {
     OFF = 'off',
@@ -69,27 +68,25 @@ let autoInputMode = {
     [AutoInputMode.OFF]: { name: 'Off', description: "Don't set touch mode automatically" },
     [AutoInputMode.FIRST]: { name: 'First Interaction', description: "Change touch mode on first ui interaction" },
     [AutoInputMode.EVERY]: { name: 'Every Interaction', description: "Change touch mode on every ui interaction" }
-}
+} satisfies StateEnumList
 
 export class ThemeEngine {
     /**Reference to document handler*/
     private _handler: DocumentHandler;
     private _listener: EListener<"added", DocumentHandler, Document>;
 
-    readonly scrollbar: State<ScrollbarMode, StateEnumOptions<typeof scrollbarMode>>;
+    readonly scrollbar: StateWrite<ScrollbarMode>;
+    readonly animations: StateWrite<AnimationMode>;
+    readonly theme: StateWrite<string>;
+    readonly autoThemeMode: StateWrite<AutoThemeMode>;
 
-    readonly animations: State<AnimationMode, StateEnumOptions<typeof animationMode>>;
-
-    readonly theme: State<string, StateEnumOptions<typeof themes>>;
-    readonly autoThemeMode: State<AutoThemeMode, StateEnumOptions<typeof autoThemeMode>>;
-
-    readonly scale: State<number, StateNumberOptions>;
+    readonly scale: StateWrite<number>;
     private _scale: number;
-    readonly scaleMouse: State<number, StateNumberOptions>;
-    readonly scalePen: State<number, StateNumberOptions>;
-    readonly scaleTouch: State<number, StateNumberOptions>;
-    readonly inputMode: State<InputMode, StateEnumOptions<typeof inputMode>>;
-    readonly autoInputMode: State<AutoInputMode, StateEnumOptions<typeof autoInputMode>>;
+    readonly scaleMouse: StateWrite<number>;
+    readonly scalePen: StateWrite<number>;
+    readonly scaleTouch: StateWrite<number>;
+    readonly inputMode: StateWrite<InputMode>;
+    readonly autoInputMode: StateWrite<AutoInputMode>;
     private _autoInputListenerEvery = (event: PointerEvent) => {
         switch (event.pointerType) {
             case 'mouse': this.inputMode.set(InputMode.MOUSE); break;
@@ -99,46 +96,46 @@ export class ThemeEngine {
         }
     }
 
-    readonly textScale: State<number, StateNumberOptions>;
-    readonly textScaleMouse: State<number, StateNumberOptions>;
-    readonly textScalePen: State<number, StateNumberOptions>;
-    readonly textScaleTouch: State<number, StateNumberOptions>;
+    readonly textScale: StateWrite<number>;
+    readonly textScaleMouse: StateWrite<number>;
+    readonly textScalePen: StateWrite<number>;
+    readonly textScaleTouch: StateWrite<number>;
 
     constructor(documentHandler: DocumentHandler, namespace: string = '', name: string = '', description: string = '') {
-        let localSettings = (namespace ? settings.makeSubGroup(namespace + '-', name, description) : settings);
+        let localSettings = (namespace ? settings.makeSubGroup(namespace, name, description) : settings);
         if (!localSettings) {
             throw new Error('Creating settings group for theme engine failed');
         }
 
-        let { state: scrollbarState, set: scrollbarSet } = createStateEnum(ScrollbarMode.THIN, (value) => {
+        let { state: scrollbarState, set: scrollbarSet } = createState(ScrollbarMode.THIN, (value, set) => {
             this.applyScrollbar(value);
             scrollbarSet(value)
-        }, { name: 'Scrollbar', description: 'Size of scrollbar', enums: scrollbarMode });
+        });
         this.scrollbar = scrollbarState;
         localSettings.addState('scrollbar', scrollbarState, scrollbarSet);
 
-        let { state: animationsState, set: animationsSet } = createStateEnum(AnimationMode.ALL, (value) => {
+        let { state: animationsState, set: animationsSet } = createState(AnimationMode.ALL, (value) => {
             this.applyAnimation(value);
             animationsSet(value)
-        }, { name: 'Animations', description: 'Amount of animations in the ui', enums: animationMode });
+        });
         this.animations = animationsState;
         localSettings.addState('animations', animationsState, animationsSet);
 
-        let { state: themeState, set: themeSet } = createStateEnum((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? <string>DefaultThemes.Dark : <string>DefaultThemes.Light), (value) => {
+        let { state: themeState, set: themeSet } = createState((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? DefaultThemes.Dark : DefaultThemes.Light), (value) => {
             this.applyTheme(value);
             themeSet(value)
-        }, { name: 'Theme', description: 'Color theme of UI', enums: themes });
+        });
         this.theme = themeState;
         localSettings.addState('theme', themeState, themeSet);
 
-        let { state: autoThemeModeState, set: autoThemeModeSet } = createStateEnum(AutoThemeMode.OS, (value) => {
+        let { state: autoThemeModeState, set: autoThemeModeSet } = createState(AutoThemeMode.OS, (value) => {
             this.applyTheme(value);
             autoThemeModeSet(value)
-        }, { name: 'Automatic Theme Change', description: 'Toggle for automatically changing theme', enums: autoThemeMode });
+        });
         this.autoThemeMode = autoThemeModeState;
         localSettings.addState('autoTheme', autoThemeModeState, autoThemeModeSet);
 
-        let { state: inputModeState, set: inputModeSet } = createStateEnum(InputMode.MOUSE, async (value) => {
+        let { state: inputModeState, set: inputModeSet } = createState(InputMode.MOUSE, async (value) => {
             switch (value) {
                 case InputMode.MOUSE: this.scale.set(await this.scaleMouse); break;
                 case InputMode.PEN: this.scale.set(await this.scalePen); break;
@@ -146,18 +143,18 @@ export class ThemeEngine {
             }
             this.applyInput(value);
             inputModeSet(value)
-        }, { name: 'Automatic Theme Change', description: 'Toggle for automatically changing theme', enums: inputMode });
+        });
         this.inputMode = inputModeState;
         localSettings.addState('inputMode', inputModeState, inputModeSet);
 
-        let { state: autoInputModeState, set: autoInputModeSet } = createStateEnum(AutoInputMode.EVERY, (value) => {
+        let { state: autoInputModeState, set: autoInputModeSet } = createState(AutoInputMode.EVERY, (value) => {
             this.applyAutoInput(value);
             autoInputModeSet(value)
-        }, { name: 'Automatic Touch Mode', description: 'Mode for automatically changing touch mode', enums: autoInputMode });
+        });
         this.autoInputMode = autoInputModeState;
         localSettings.addState('autoTouch', autoInputModeState, autoInputModeSet);
 
-        let { state: scaleState, set: scaleSet } = createStateNumber(1, async (value) => {
+        let { state: scaleState, set: scaleSet } = createState(1, async (value) => {
             this._scale = value * 16;
             this.applyScale(value);
             switch (await this.inputMode) {
@@ -166,32 +163,32 @@ export class ThemeEngine {
                 case InputMode.TOUCH: this.scaleTouch.set(value); break;
             }
             scaleSet(value);
-        }, { min: 0.5, max: 4, decimals: 1 });
+        });
         this.scale = scaleState
 
-        let { state: scaleMouseState, set: scaleMouseSet } = createStateNumber(1, async (value) => {
+        let { state: scaleMouseState, set: scaleMouseSet } = createState(1, async (value) => {
             if (await this.inputMode === InputMode.MOUSE) { textScaleSet(value); }
             scaleMouseSet(value);
-        }, { name: 'UI Scale Mouse', description: 'The scale of the UI for mouse usage', min: 0.5, max: 4, decimals: 1, step: { size: 0.1 } });
+        });
         this.scaleMouse = scaleMouseState
         localSettings.addState('scaleMouse', this.scaleMouse, scaleMouseSet);
 
-        let { state: scalePenState, set: scalePenSet } = createStateNumber(1, async (value) => {
+        let { state: scalePenState, set: scalePenSet } = createState(1, async (value) => {
             if (await this.inputMode === InputMode.PEN) { textScaleSet(value); }
             scalePenSet(value);
-        }, { name: 'UI Scale Pen', description: 'The scale of the UI for pen usage', min: 0.5, max: 4, decimals: 1, step: { size: 0.1 } });
+        });
         this.scalePen = scalePenState
         localSettings.addState('scalePen', this.scalePen, scalePenSet);
 
-        let { state: scaleTouchState, set: scaleTouchSet } = createStateNumber(1, async (value) => {
+        let { state: scaleTouchState, set: scaleTouchSet } = createState(1, async (value) => {
             if (await this.inputMode === InputMode.MOUSE) { textScaleSet(value); }
             scaleTouchSet(value);
-        }, { name: 'UI Scale Touch', description: 'The scale of the UI for touch usage', min: 0.5, max: 4, decimals: 1, step: { size: 0.1 } });
+        });
         this.scaleTouch = scaleTouchState
         localSettings.addState('scaleTouch', this.scaleTouch, scaleTouchSet);
 
 
-        let { state: textScaleState, set: textScaleSet } = createStateNumber(1, async (value) => {
+        let { state: textScaleState, set: textScaleSet } = createState(1, async (value) => {
             this.applyTextScale(value);
             switch (await this.inputMode) {
                 case InputMode.MOUSE: textScaleMouseSet(value); break;
@@ -199,26 +196,26 @@ export class ThemeEngine {
                 case InputMode.TOUCH: textScaleTouchSet(value); break;
             }
             textScaleSet(value);
-        }, { min: 0.5, max: 4, decimals: 1 });
+        });
         this.textScale = textScaleState;
-        let { state: textScaleMouseState, set: textScaleMouseSet } = createStateNumber(1, async (value) => {
+        let { state: textScaleMouseState, set: textScaleMouseSet } = createState(1, async (value) => {
             if (await this.inputMode === InputMode.MOUSE) { textScaleSet(value); }
             textScaleMouseSet(value);
-        }, { name: 'UI Text Scale Mouse Mode', description: 'The scale of the UI text for mouse usage', min: 0.5, max: 2, decimals: 1, step: { size: 0.1 } });
+        });
         this.textScaleMouse = textScaleMouseState
         localSettings.addState('textScaleMouse', this.textScaleMouse, textScaleMouseSet);
 
-        let { state: textScalePenState, set: textScalePenSet } = createStateNumber(1, async (value) => {
+        let { state: textScalePenState, set: textScalePenSet } = createState(1, async (value) => {
             if (await this.inputMode === InputMode.PEN) { textScaleSet(value); }
             textScalePenSet(value);
-        }, { name: 'UI Text Scale Pen Mode', description: 'The scale of the UI text for pen usage', min: 0.5, max: 2, decimals: 1, step: { size: 0.1 } });
+        });
         this.textScalePen = textScalePenState
         localSettings.addState('textScalePen', this.textScalePen, textScalePenSet);
 
-        let { state: textScaleTouchState, set: textScaleTouchSet } = createStateNumber(1, async (value) => {
+        let { state: textScaleTouchState, set: textScaleTouchSet } = createState(1, async (value) => {
             if (await this.inputMode === InputMode.TOUCH) { textScaleSet(value); }
             textScaleTouchSet(value);
-        }, { name: 'UI Text Scale Touch Mode', description: 'The scale of the UI text for touch usage', min: 0.5, max: 2, decimals: 1, step: { size: 0.1 } });
+        });
         this.textScaleTouch = textScaleTouchState
         localSettings.addState('textScaleTouch', this.textScaleTouch, textScaleTouchSet);
 
