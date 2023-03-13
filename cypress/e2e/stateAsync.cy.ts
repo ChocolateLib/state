@@ -114,8 +114,8 @@ describe('Async subscribe', function () {
             }
             , () => { throw new Error('This should not be called'); }
             , () => { throw new Error('This should not be called'); });
-        state.subscribe(() => { calls[1](0); });
-        state.subscribe(() => { calls[2](0); });
+        state.subscribe(() => { calls[1](0); }, true);
+        state.subscribe(() => { calls[2](0); }, true);
         await promise;
     });
     it('Async unsubscribe', async function () {

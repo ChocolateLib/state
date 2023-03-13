@@ -3,12 +3,14 @@ import { StateRead, StateSubscriber } from "./types";
 export abstract class StateBase<R> implements StateRead<R>{
     _subscribers: StateSubscriber<R>[] = [];
 
-    subscribe<B extends StateSubscriber<R>>(func: B): B {
+    subscribe<B extends StateSubscriber<R>>(func: B, update: boolean): B {
         this._subscribers.push(func);
-        try {
-            this.then(func);
-        } catch (error) {
-            console.warn('Failed while calling update function', this, func);
+        if (update) {
+            try {
+                this.then(func);
+            } catch (error) {
+                console.warn('Failed while calling update function', this, func);
+            }
         }
         return func;
     }

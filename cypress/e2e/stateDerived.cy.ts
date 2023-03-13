@@ -25,7 +25,7 @@ describe('Subscribers', function () {
         derived.subscribe((value) => {
             expect(value).equal(1);
             done();
-        });
+        }, true);
     });
     it('If a subscriber is added to a ValueMulti, it start listening to all Values', function (done) {
         let { state: state1, set: set1 } = createState(1);

@@ -58,14 +58,14 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
         this._waiting = false;
     }
 
-    subscribe<B extends StateSubscriber<R>>(func: B): B {
+    subscribe<B extends StateSubscriber<R>>(func: B, update: boolean): B {
         if (this._subscribers.length === 0) {
             this._isLive = true;
             this._subscribers.push(func);
             this._setup(this)
             return func;
         }
-        return super.subscribe(func);
+        return super.subscribe(func, update);
     }
 
     unsubscribe<B extends StateSubscriber<R>>(func: B): B {

@@ -59,13 +59,13 @@ class StateDerivedClass<O, I> extends StateBase<O | undefined> {
         }
     }
 
-    subscribe<B extends StateSubscriber<O | undefined>>(func: B): B {
+    subscribe<B extends StateSubscriber<O | undefined>>(func: B, update: boolean): B {
         if (this._subscribers.length === 0) {
             this._subscribers.push(func);
             this._connect();
             return func;
         }
-        return super.subscribe(func);
+        return super.subscribe(func, update);
     }
 
     unsubscribe<B extends StateSubscriber<O | undefined>>(func: B): B {

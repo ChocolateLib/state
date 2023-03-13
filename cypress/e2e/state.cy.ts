@@ -99,48 +99,48 @@ describe('Getting state value', async function () {
 describe('Value subscriber', function () {
     it('Add one subscribers with update set true', function () {
         let { state, set } = createState(2);
-        state.subscribe((value) => { expect(value).equal(2); });
+        state.subscribe((value) => { });
+    });
+    it('Add one subscribers with update set true', function () {
+        let { state, set } = createState(2);
+        state.subscribe((value) => { expect(value).equal(2); }, true);
     });
     it('Add two subscribers with update set true', async function () {
         let { state, set } = createState(2);
         let values = await Promise.all([
-            new Promise<number>((a) => { state.subscribe(a) }),
-            new Promise<number>((a) => { state.subscribe(a) }),
+            new Promise<number>((a) => { state.subscribe(a, true) }),
+            new Promise<number>((a) => { state.subscribe(a, true) }),
         ])
         expect(values).deep.equal([2, 2]);
     });
-    it('Insert two subscribers then remove first subscribers', function () {
+    it('Insert two subscribers then remove first subscribers', function (done) {
         let { state, set } = createState(2);
-        let sum = 0
-        let func = state.subscribe(() => { sum++ });
-        state.subscribe(() => { sum++ });
+        let func = state.subscribe(() => { });
+        state.subscribe(() => { done() });
         state.unsubscribe(func);
         set(4)
-        expect(sum).equal(3);
     });
-    it('Insert two subscribers then removeing both subscribers', function () {
+    it('Insert two subscribers then removeing both subscribers', function (done) {
         let { state, set } = createState(2);
         let sum = 0
-        let func1 = state.subscribe(() => { sum++ });
-        let func2 = state.subscribe(() => { sum++ });
+        let func1 = state.subscribe(() => { done('Should not be called') });
+        let func2 = state.subscribe(() => { done('Should not be called') });
         state.unsubscribe(func1);
         state.unsubscribe(func2);
         set(4)
-        expect(sum).equal(2);
+        done();
     });
-    it('Setting value with one subscribers', function () {
+    it('Setting value with one subscribers', function (done) {
         let { state, set } = createState(2);
-        let sum = 0
-        state.subscribe((val) => { sum += val });
+        state.subscribe((val) => { done() });
         set(10);
-        expect(sum).equal(12);
     });
     it('Setting value with multiple subscribers', async function () {
         let { state, set } = createState(2);
         let sum = 0
-        state.subscribe((val) => { sum += val })
-        state.subscribe((val) => { sum += val })
-        state.subscribe((val) => { sum += val })
+        state.subscribe((val) => { sum += val }, true)
+        state.subscribe((val) => { sum += val }, true)
+        state.subscribe((val) => { sum += val }, true)
         set(10);
         expect(sum).equal(36);
     });

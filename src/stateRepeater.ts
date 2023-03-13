@@ -37,13 +37,13 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> {
         }
     }
 
-    subscribe<B extends StateSubscriber<T | undefined>>(func: B): B {
+    subscribe<B extends StateSubscriber<T | undefined>>(func: B, update: boolean): B {
         if (this._subscribers.length === 0 && this._state) {
             this._subscribers.push(func);
             this._state.subscribe(this._subscriber.bind(this));
             return func;
         }
-        return super.subscribe(func);
+        return super.subscribe(func, update);
     }
 
     unsubscribe<B extends StateSubscriber<T | undefined>>(func: B): B {

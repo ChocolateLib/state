@@ -16,8 +16,9 @@ export type StateLimiter<W> = (value: W) => W
 export interface StateRead<R> {
     /**Allows getting */
     then<TResult1 = R, TResult2 = never>(onfulfilled: ((value: R) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): PromiseLike<TResult1 | TResult2>
-    /**This adds a function as a subscriber to the state*/
-    subscribe<B extends StateSubscriber<R>>(func: B): B
+    /**This adds a function as a subscriber to the state
+     * @param update set true to update subscriber*/
+    subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B
     /**This removes a function as a subscriber to the state*/
     unsubscribe<B extends StateSubscriber<R>>(func: B): B
 }
