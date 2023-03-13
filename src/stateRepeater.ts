@@ -31,17 +31,19 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> {
         }
         if (state) {
             if (this._subscribers.length) {
-                this._subscriber = state.subscribe(this._subscriber.bind(this), true);
+                this._subscriber = state.subscribe(this._subscriber.bind(this));
             }
             this._state = state;
         }
     }
 
-    subscribe<B extends StateSubscriber<T | undefined>>(func: B, update?: boolean): B {
+    subscribe<B extends StateSubscriber<T | undefined>>(func: B): B {
         if (this._subscribers.length === 0 && this._state) {
+            this._subscribers.push(func);
             this._state.subscribe(this._subscriber.bind(this));
+            return func;
         }
-        return super.subscribe(func, update);
+        return super.subscribe(func);
     }
 
     unsubscribe<B extends StateSubscriber<T | undefined>>(func: B): B {
@@ -49,7 +51,7 @@ class StateRepeaterClass<T, I> extends StateBase<T | undefined> {
             this._valid = false
             this._state.unsubscribe(this._subscriber);
         }
-        return this.unsubscribe(func);
+        return super.unsubscribe(func);
     }
 
     async then<TResult1 = T>(func: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {

@@ -99,46 +99,50 @@ describe('Getting state value', async function () {
 describe('Value subscriber', function () {
     it('Add one subscribers with update set true', function () {
         let { state, set } = createState(2);
-        state.subscribe((value) => { expect(value).equal(2); }, true);
+        state.subscribe((value) => { expect(value).equal(2); });
     });
     it('Add two subscribers with update set true', async function () {
         let { state, set } = createState(2);
         let values = await Promise.all([
-            new Promise<number>((a) => { state.subscribe(a, true) }),
-            new Promise<number>((a) => { state.subscribe(a, true) }),
+            new Promise<number>((a) => { state.subscribe(a) }),
+            new Promise<number>((a) => { state.subscribe(a) }),
         ])
         expect(values).deep.equal([2, 2]);
     });
-    it('Insert two subscribers then remove first subscribers', function (done) {
+    it('Insert two subscribers then remove first subscribers', function () {
         let { state, set } = createState(2);
-        let func = state.subscribe(() => { done('Fail') });
-        state.subscribe(() => { done() });
+        let sum = 0
+        let func = state.subscribe(() => { sum++ });
+        state.subscribe(() => { sum++ });
         state.unsubscribe(func);
         set(4)
+        expect(sum).equal(3);
     });
-    it('Insert two subscribers then removeing both subscribers', function (done) {
+    it('Insert two subscribers then removeing both subscribers', function () {
         let { state, set } = createState(2);
-        let func1 = state.subscribe(() => { done('Fail') });
-        let func2 = state.subscribe(() => { done('Fail') });
+        let sum = 0
+        let func1 = state.subscribe(() => { sum++ });
+        let func2 = state.subscribe(() => { sum++ });
         state.unsubscribe(func1);
         state.unsubscribe(func2);
         set(4)
-        done()
+        expect(sum).equal(2);
     });
-    it('Setting value with one subscribers', function (done) {
+    it('Setting value with one subscribers', function () {
         let { state, set } = createState(2);
-        state.subscribe((val) => { done((val === 10 ? undefined : 'Unexpected value')) });
+        let sum = 0
+        state.subscribe((val) => { sum += val });
         set(10);
+        expect(sum).equal(12);
     });
     it('Setting value with multiple subscribers', async function () {
         let { state, set } = createState(2);
-        let values = Promise.all([
-            new Promise<number>((a) => { state.subscribe(a) }),
-            new Promise<number>((a) => { state.subscribe(a) }),
-            new Promise<number>((a) => { state.subscribe(a) }),
-        ])
+        let sum = 0
+        state.subscribe((val) => { sum += val })
+        state.subscribe((val) => { sum += val })
+        state.subscribe((val) => { sum += val })
         set(10);
-        expect(await values).deep.equal([10, 10, 10]);
+        expect(sum).equal(36);
     });
     it('Setting value with subscribers with exception', function () {
         let { state, set } = createState(2);

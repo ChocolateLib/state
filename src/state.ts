@@ -8,7 +8,7 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateWri
     }
 
     _value: R;
-    _setter: StateUserSet<W> | undefined;
+    _setter: StateUserSet<R, W> | undefined;
     _check: StateChecker<W> | undefined;
     _limit: StateLimiter<W> | undefined;
 
@@ -27,12 +27,10 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateWri
         }
     }
 
-    /**Used to check if a value is valid for the state, returns the reason why it is not valid */
     check(value: W): string | undefined {
         return (this._check ? this._check(value) : undefined)
     }
 
-    /**Returns the given value modified to be within the states limits, or just the given value */
     limit(value: W): W {
         return (this._limit ? this._limit(value) : value);
     }
@@ -43,7 +41,7 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateWri
  * @param setter function called when state value is set via setter, set true let state set it's own value 
  * @param checker function to allow state users to check if a given value is valid for the state
  * @param limiter function to allow state users to limit a given value to state limit */
-export const createState = <R, W extends R>(init: R, setter?: StateUserSet<W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
+export const createState = <R, W extends R = R>(init: R, setter?: StateUserSet<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
     let state = new StateClass<R, W>(init);
     if (setter) {
         state._setter = (setter === true ? state.setAndUpdate : setter);

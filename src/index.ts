@@ -1,4 +1,6 @@
 export * from "./types"
 export * from "./state"
+export * from "./stateAsync"
 export * from "./stateBase"
 export * from "./stateDerived"
+export * from "./stateRepeater"

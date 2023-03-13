@@ -3,8 +3,8 @@ import { StateBase } from "./stateBase";
 
 type Getter<T, I> = (value: I[]) => T
 
-class StateDerivedClass<T, I> extends StateBase<T | undefined> {
-    constructor(getter: Getter<T, I>, states?: StateRead<I>[]) {
+class StateDerivedClass<O, I> extends StateBase<O | undefined> {
+    constructor(getter: Getter<O, I>, states?: StateRead<I>[]) {
         super();
         this._getter = getter;
         if (states) {
@@ -13,78 +13,71 @@ class StateDerivedClass<T, I> extends StateBase<T | undefined> {
     }
 
     _valid: boolean = false;
-    _buffer: T | undefined;
+    _buffer: O | undefined;
+
     _states: StateRead<I>[] = [];
     _stateBuffers: I[] = [];
     _stateSubscribers: StateSubscriber<I>[] = [];
-    _getter: Getter<T, I>;
-    _gettingValue: boolean = false;
+
+    _getter: Getter<O, I>;
+    _calculatingValue: boolean = false;
+
+    async _calculate() {
+        await undefined;
+        this._buffer = this._getter(this._stateBuffers);
+        this._valid = true;
+        this._updateSubscribers(this._buffer)
+        this._calculatingValue = false;
+    }
 
     _connect() {
         for (let i = 0; i < this._states.length; i++) {
             this._stateSubscribers[i] = this._states[i].subscribe((val) => {
                 this._stateBuffers[i] = val;
-                if (!this._gettingValue) {
-                    this._gettingValue = true;
-                    (async () => {
-                        await undefined;
-                        this._buffer = this._getter(this._stateBuffers);
-                        this._updateSubscribers(this._buffer)
-                        this._gettingValue = false;
-                    })();
+                if (!this._calculatingValue) {
+                    this._calculatingValue = true;
+                    this._calculate();
                 }
             });
         }
     }
 
     _disconnect() {
-        if (this._states) {
-
-        }
         for (let i = 0; i < this._states.length; i++) {
             this._states[i].unsubscribe(this._stateSubscribers[i]);
         }
         this._stateSubscribers = [];
     }
 
-    setStates(states: StateRead<I>[] | undefined) {
+    setStates(...states: StateRead<I>[]) {
         if (this._subscribers.length) {
             this._disconnect();
-        }
-        if (states) {
             this._states = [...states];
-            if (this._subscribers.length) {
-                this._connect();
-            }
+            this._connect();
         } else {
-            this._states = [];
+            this._states = [...states];
         }
     }
 
-    subscribe<B extends StateSubscriber<T | undefined>>(func: B, update?: boolean): B {
-        if (this._subscribers.length === 0 && this._states) {
+    subscribe<B extends StateSubscriber<O | undefined>>(func: B): B {
+        if (this._subscribers.length === 0) {
+            this._subscribers.push(func);
             this._connect();
-        }
-        if (update) {
-            try {
-                this.then(func);
-            } catch (error) {
-                console.warn('Failed while calling update function', this, func);
-            }
+            return func;
         }
         return super.subscribe(func);
     }
 
-    unsubscribe<B extends StateSubscriber<T | undefined>>(func: B): B {
+    unsubscribe<B extends StateSubscriber<O | undefined>>(func: B): B {
         if (this._subscribers.length === 1) {
             this._disconnect();
         }
-        return this.unsubscribe(func);
+        return super.unsubscribe(func);
     }
 
-    async then<TResult1 = T>(func: ((value: T | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
+    async then<TResult1 = O>(func: ((value: O | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
         if (this._valid) {
-            return func(<T>this._buffer);
+            return func(<O>this._buffer);
         } else if (this._states) {
             return func(this._getter(await Promise.all(this._states)));
         } else {
@@ -96,39 +89,37 @@ class StateDerivedClass<T, I> extends StateBase<T | undefined> {
 /**Creates a state derives a value from other states
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
  * @param getter function called when state value is set via setter, set true let state set it's own value */
-export const createStateDerived = <T, I>(getter: Getter<T, I>, states?: StateRead<I>[]) => {
-    let repeater = new StateDerivedClass<T, I>(getter, states);
+export const createStateDerived = <O, I>(getter: Getter<O, I>, ...states: StateRead<I>[]) => {
+    let derived = new StateDerivedClass<O, I>(getter, states);
     return {
-        repeater: repeater as StateRead<T>,
-        setStates: repeater.setStates.bind(repeater) as (value: StateRead<I>[] | undefined) => void,
+        derived: derived as StateRead<O>,
+        setStates: derived.setStates.bind(derived) as (...states: StateRead<I>[]) => void,
     }
 }
 
+const averageFunc = (values: number[]) => {
+    let sum = 0;
+    for (let i = 0; i < values.length; i++) { sum += values[i]; }
+    return sum / values.length;
+};
 /**Creates a state which keeps the avererage of the value of other states*/
-export const createStateAverager = (states?: StateRead<number>[]) => {
-    let repeater = new StateDerivedClass<number, number>((values) => {
-        let sum = 0;
-        for (let i = 0; i < values.length; i++) {
-            sum += values[i];
-        }
-        return sum / values.length;
-    }, states);
+export const createStateAverager = (...states: StateRead<number>[]) => {
+    let derived = new StateDerivedClass<number, number>(averageFunc, states);
     return {
-        repeater: repeater as StateRead<number>,
-        setStates: repeater.setStates.bind(repeater) as (value: StateRead<number>[] | undefined) => void,
+        derived: derived as StateRead<number>,
+        setStates: derived.setStates.bind(derived) as (...states: StateRead<number>[]) => void,
     }
 }
+const summerFunc = (values: number[]) => {
+    let sum = 0;
+    for (let i = 0; i < values.length; i++) { sum += values[i]; }
+    return sum;
+};
 /**Creates a state which keeps the sum of the value of other states*/
-export const createStateSummer = (states?: StateRead<number>[]) => {
-    let repeater = new StateDerivedClass<number, number>((values) => {
-        let sum = 0;
-        for (let i = 0; i < values.length; i++) {
-            sum += values[i];
-        }
-        return sum;
-    }, states);
+export const createStateSummer = (...states: StateRead<number>[]) => {
+    let derived = new StateDerivedClass<number, number>(summerFunc, states);
     return {
-        repeater: repeater as StateRead<number>,
-        setStates: repeater.setStates.bind(repeater) as (value: StateRead<number>[] | undefined) => void,
+        derived: derived as StateRead<number>,
+        setStates: derived.setStates.bind(derived) as (...states: StateRead<number>[]) => void,
     }
 }
