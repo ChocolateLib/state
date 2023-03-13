@@ -1,5 +1,5 @@
 {
-  "name": "@chocolatelib/value",
+  "name": "@chocolatelib/state",
   "version": "0.0.1",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -21,7 +21,6 @@
     "prepublishOnly": "yarn run test && yarn run build:lib && yarn run build:pages"
   },
   "devDependencies": {
-    "@chocolatelibui/icons": "^0.0.3",
     "cypress": "12.7.0",
     "cypress-vite": "^1.2.1",
     "start-server-and-test": "^1.14.0",
@@ -35,13 +34,11 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ChocolateLib/value.git"
+    "url": "git+https://github.com/ChocolateLib/state.git"
   },
   "bugs": {
-    "url": "https://github.com/ChocolateLib/value/issues"
+    "url": "https://github.com/ChocolateLib/state/issues"
   },
-  "homepage": "https://github.com/ChocolateLib/value#readme",
-  "dependencies": {
-    "@chocolatelib/string": "<1.0.0 || ^1.0.0"
-  }
+  "homepage": "https://github.com/ChocolateLib/state#readme",
+  "dependencies": {}
 }
