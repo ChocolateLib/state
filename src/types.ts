@@ -2,7 +2,7 @@
 export type StateSubscriber<R> = (val: R) => void
 
 /**Function called when user sets value*/
-export type StateUserSet<R, W extends R> = (value: W, set: StateSetter<R>) => void
+export type StateUserSet<R, W extends R = R> = (value: W, set: StateSetter<R>) => void
 
 /**Function used to change value of state by owner*/
 export type StateSetter<R> = (value: R) => void
@@ -22,7 +22,7 @@ export interface StateRead<R> {
     unsubscribe<B extends StateSubscriber<R>>(func: B): B
 }
 
-export interface StateWrite<R, W extends R> extends StateRead<R> {
+export interface StateWrite<R, W extends R = R> extends StateRead<R> {
     /** This sets the value of the state and updates all subscribers */
     set(value: W): void
     /**Used to check if a value is valid for the state, returns the reason why it is not valid */
@@ -46,7 +46,7 @@ export interface StateAsyncLive<R> {
 export type StateAsyncOnce<R> = (state: StateAsyncLive<R>) => void
 
 /**Function used when  */
-export type StateAsyncSet<R, W extends R> = (state: StateAsyncLive<R>, value: W, set: StateSetter<R>) => void
+export type StateAsyncSet<R, W extends R = R> = (state: StateAsyncLive<R>, value: W, set: StateSetter<R>) => void
 
 
 export type StateEnumEntry = {
