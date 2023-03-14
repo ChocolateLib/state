@@ -38,7 +38,7 @@ class StateDerivedClass<O, I> extends StateBase<O | undefined> {
                     this._calculatingValue = true;
                     this._calculate();
                 }
-            });
+            }, true);
         }
     }
 
