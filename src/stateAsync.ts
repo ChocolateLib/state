@@ -1,8 +1,8 @@
 import { StateBase } from "./stateBase";
-import { StateWrite, StateChecker, StateLimiter, StateSubscriber, StateAsyncLive, StateAsyncOnce, StateAsyncSet } from "./types";
+import { StateWrite, StateChecker, StateLimiter, StateSubscriber, StateAsync, StateAsyncRead, StateAsyncWrite, StateOwner } from "./types";
 
-export class StateAsyncClass<R, W extends R> extends StateBase<R> implements StateAsyncLive<R> {
-    constructor(once: StateAsyncOnce<R>, setup: StateAsyncOnce<R>, teardown: StateAsyncOnce<R>) {
+export class StateAsyncClass<R, W extends R> extends StateBase<R> implements StateAsync<R, W> {
+    constructor(once: StateAsyncRead<R>, setup: StateAsyncRead<R>, teardown: StateAsyncRead<R>) {
         super();
         this._once = once;
         this._setup = setup;
@@ -13,51 +13,18 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
     _valid: boolean = false;
     _buffer: R | undefined;
 
-    _once: StateAsyncOnce<R>;
-    _setup: StateAsyncOnce<R>;
-    _teardown: StateAsyncOnce<R>;
+    _once: StateAsyncRead<R>;
+    _setup: StateAsyncRead<R>;
+    _teardown: StateAsyncRead<R>;
     _waiting: boolean = false;
     _fulfillment: ((value: R | PromiseLike<R>) => void)[] = [];
     _rejections: ((reason?: any) => void)[] = [];
 
-    _setter: StateAsyncSet<R, W> | undefined;
+    _setter: StateAsyncWrite<R, W> | undefined;
     _check: StateChecker<W> | undefined;
     _limit: StateLimiter<W> | undefined;
 
-
-    setAndUpdate(value: R) {
-        this._buffer = value;
-        this._updateSubscribers(value);
-    }
-
-    setLiveValue(value: R, invalidReason?: any) {
-        this._valid = !Boolean(invalidReason);
-        this._buffer = value;
-        this._updateSubscribers(value);
-        if (this._waiting) {
-            if (invalidReason) {
-                this.setRejection(invalidReason)
-            } else {
-                this.setFulfillment(value);
-            }
-        }
-    }
-
-    setFulfillment(value: R) {
-        for (let i = 0; i < this._fulfillment.length; i++) {
-            this._fulfillment[i](value);
-        }
-        this._rejections = [];
-        this._waiting = false;
-    }
-    setRejection(reason: any) {
-        for (let i = 0; i < this._rejections.length; i++) {
-            this._rejections[i](reason);
-        }
-        this._fulfillment = [];
-        this._waiting = false;
-    }
-
+    //Read
     subscribe<B extends StateSubscriber<R>>(func: B, update: boolean): B {
         if (this._subscribers.length === 0) {
             this._isLive = true;
@@ -67,7 +34,6 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
         }
         return super.subscribe(func, update);
     }
-
     unsubscribe<B extends StateSubscriber<R>>(func: B): B {
         if (this._subscribers.length === 1) {
             this._isLive = false;
@@ -76,7 +42,6 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
         }
         return super.unsubscribe(func);
     }
-
     async then<TResult1 = R, TResult2 = never>(onfulfilled: ((value: R) => TResult1 | PromiseLike<TResult1>), onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>)): Promise<TResult1 | TResult2> {
         if (this._valid) {
             return await onfulfilled(<R>this._buffer);
@@ -99,19 +64,57 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
             }
         }
     }
-
+    //Write
     write(value: W): void {
         if (this._setter && this._buffer !== value) {
-            this._setter(this, value, this.setAndUpdate.bind(this));
+            this._setter(value, this);
         }
     }
-
     check(value: W): string | undefined {
         return (this._check ? this._check(value) : undefined)
     }
-
     limit(value: W): W {
         return (this._limit ? this._limit(value) : value);
+    }
+
+    //Owner
+    set(value: R) {
+        this._buffer = value;
+        this._updateSubscribers(value);
+    }
+    inUse(): boolean {
+        return Boolean(this._subscribers.length);
+    }
+    hasSubscriber(subscriber: StateSubscriber<R>): boolean {
+        return this._subscribers.includes(subscriber);
+    }
+
+    //Async
+    setLiveValue(value: R, invalidReason?: any) {
+        this._valid = !Boolean(invalidReason);
+        this._buffer = value;
+        this._updateSubscribers(value);
+        if (this._waiting) {
+            if (invalidReason) {
+                this.setRejection(invalidReason)
+            } else {
+                this.setFulfillment(value);
+            }
+        }
+    }
+    setFulfillment(value: R) {
+        for (let i = 0; i < this._fulfillment.length; i++) {
+            this._fulfillment[i](value);
+        }
+        this._rejections = [];
+        this._waiting = false;
+    }
+    setRejection(reason: any) {
+        for (let i = 0; i < this._rejections.length; i++) {
+            this._rejections[i](reason);
+        }
+        this._fulfillment = [];
+        this._waiting = false;
     }
 }
 
@@ -123,7 +126,7 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
  * @param setter function called when state value is set via setter, set true let state set it's own value 
  * @param checker function to allow state users to check if a given value is valid for the state
  * @param limiter function to allow state users to limit a given value to state limit */
-export const createStateAsync = <R, W extends R = R>(once: StateAsyncOnce<R>, setup: StateAsyncOnce<R>, teardown: StateAsyncOnce<R>, setter?: StateAsyncSet<R, W>, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
+export const createStateAsync = <R, W extends R = R>(once: StateAsyncRead<R>, setup: StateAsyncRead<R>, teardown: StateAsyncRead<R>, setter?: StateAsyncWrite<R, W>, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
     let state = new StateAsyncClass<R, W>(once, setup, teardown);
     if (setter) {
         state._setter = setter;
@@ -134,5 +137,5 @@ export const createStateAsync = <R, W extends R = R>(once: StateAsyncOnce<R>, se
     if (limiter) {
         state._limit = limiter;
     }
-    return { state: state as StateWrite<R, W> }
+    return state as StateOwner<R, W>;
 }

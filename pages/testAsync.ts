@@ -1,4 +1,4 @@
-import { createStateAsync, createStateAsync } from "../src";
+import { createStateAsync } from "../src";
 
 export const createTestAsync = () => {
     let value: number = 0;
@@ -7,7 +7,7 @@ export const createTestAsync = () => {
         console.warn('Async Test Once Called');
         await new Promise((a) => { setTimeout(a, 500) });
         state.setFulfillment(value);
-    })
+    }, () => { }, () => { })
 }
 
 let calls: (() => void)[] = [];

@@ -1,5 +1,5 @@
 import { StateBase } from "./stateBase";
-import { StateWrite, StateChecker, StateLimiter, StateSetter, StateUserSet, StateOwner, StateSubscriber } from "./types";
+import { StateChecker, StateLimiter, StateUserSet, StateOwner, StateSubscriber } from "./types";
 
 export class StateClass<R, W extends R> extends StateBase<R> implements StateOwner<R, W> {
     constructor(init: R) {
@@ -19,7 +19,7 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateOwn
     //Write
     write(value: W): void {
         if (this._setter && this._value !== value) {
-            this._setter(value, this.set.bind(this));
+            this._setter(value, this);
         }
     }
     check(value: W): string | undefined {

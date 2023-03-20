@@ -2,10 +2,8 @@
 export type StateSubscriber<R> = (val: R) => void
 
 /**Function called when user sets value*/
-export type StateUserSet<R, W extends R = R> = (value: W, set: StateSetter<R>) => void
+export type StateUserSet<R, W extends R = R> = (value: W, set: StateOwner<R>) => void
 
-/**Function used to change value of state by owner*/
-export type StateSetter<R> = (value: R) => void
 
 /**Function used to check if a value is within state limits*/
 export type StateChecker<W> = (value: W) => string | undefined
@@ -41,7 +39,7 @@ export interface StateOwner<R, W extends R = R> extends StateWrite<R, W> {
     hasSubscriber(subscriber: StateSubscriber<R>): boolean
 }
 
-export interface StateAsyncLive<R> {
+export interface StateAsync<R, W extends R = R> extends StateOwner<R, W> {
     /**Called to fulfill any waiting promises for value */
     setFulfillment(value: R): void
     /**Called to reject any waiting promises for value, in case value is not retrievable */
@@ -53,10 +51,9 @@ export interface StateAsyncLive<R> {
 }
 
 /**Function used to retrieve value from async source once*/
-export type StateAsyncOnce<R> = (state: StateAsyncLive<R>) => void
-
-/**Function used when  */
-export type StateAsyncSet<R, W extends R = R> = (state: StateAsyncLive<R>, value: W, set: StateSetter<R>) => void
+export type StateAsyncRead<R> = (state: StateAsync<R>) => void
+/**Function used when user writes to async source*/
+export type StateAsyncWrite<R, W extends R = R> = (value: W, state: StateAsync<R>) => void
 
 
 export type StateEnumEntry = {
