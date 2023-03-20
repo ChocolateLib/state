@@ -100,7 +100,7 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
         }
     }
 
-    set(value: W): void {
+    write(value: W): void {
         if (this._setter && this._buffer !== value) {
             this._setter(this, value, this.setAndUpdate.bind(this));
         }

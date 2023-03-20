@@ -25,11 +25,20 @@ export interface StateRead<R> {
 
 export interface StateWrite<R, W extends R = R> extends StateRead<R> {
     /** This sets the value of the state and updates all subscribers */
-    set(value: W): void
+    write(value: W): void
     /**Used to check if a value is valid for the state, returns the reason why it is not valid */
     check(value: W): string | undefined
     /**Returns the given value modified to be within the states limits, or just the given value */
     limit(value: W): W
+}
+
+export interface StateOwner<R, W extends R = R> extends StateWrite<R, W> {
+    /**Sets value of state and updates subscribers */
+    set(value: R): void
+    /**Returns wether the state has subscribers, true means it has*/
+    inUse(): boolean
+    /**Returns wether the state has a specific subscriber*/
+    hasSubscriber(subscriber: StateSubscriber<R>): boolean
 }
 
 export interface StateAsyncLive<R> {

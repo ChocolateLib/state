@@ -1,14 +1,12 @@
 import { createState, createStateAsync, createStateAverager, createStateDerived } from "../src";
-import { createDocumentHandler } from "./document";
-import { createThemeEngine } from "./theme";
 
-let { handler } = createDocumentHandler(document);
-let { engine } = createThemeEngine(handler);
+let yo: any[] = []
+declare global {
+    interface Window { yo: any; }
+}
+window.yo = yo;
 
-let { state: state1 } = createState(1);
-let { state: state2 } = createState(2);
-let { state: state3 } = createState(3);
-let { derived, setStates } = createStateDerived((values) => { return values[0] }, state1, state2, state3);
-derived.subscribe((value) => {
-    console.warn(value);
-});
+for (let i = 0; i < 1000; i++) {
+    let state = createState(1, (val) => { state.set(val); });
+    yo[i] = state;
+}

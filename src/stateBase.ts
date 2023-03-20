@@ -2,7 +2,6 @@ import { StateRead, StateSubscriber } from "./types";
 
 export abstract class StateBase<R> implements StateRead<R>{
     _subscribers: StateSubscriber<R>[] = [];
-
     subscribe<B extends StateSubscriber<R>>(func: B, update: boolean): B {
         this._subscribers.push(func);
         if (update) {

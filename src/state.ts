@@ -1,7 +1,7 @@
 import { StateBase } from "./stateBase";
-import { StateWrite, StateChecker, StateLimiter, StateSetter, StateUserSet } from "./types";
+import { StateWrite, StateChecker, StateLimiter, StateSetter, StateUserSet, StateOwner, StateSubscriber } from "./types";
 
-export class StateClass<R, W extends R> extends StateBase<R> implements StateWrite<R, W> {
+export class StateClass<R, W extends R> extends StateBase<R> implements StateOwner<R, W> {
     constructor(init: R) {
         super();
         this._value = init;
@@ -12,27 +12,33 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateWri
     _check: StateChecker<W> | undefined;
     _limit: StateLimiter<W> | undefined;
 
-    setAndUpdate(value: R) {
-        this._value = value;
-        this._updateSubscribers(value);
-    }
-
+    //Read
     async then<TResult1 = R>(func: ((value: R) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
         return await func(this._value);
     }
-
-    set(value: W): void {
+    //Write
+    write(value: W): void {
         if (this._setter && this._value !== value) {
-            this._setter(value, this.setAndUpdate.bind(this));
+            this._setter(value, this.set.bind(this));
         }
     }
-
     check(value: W): string | undefined {
         return (this._check ? this._check(value) : undefined)
     }
 
     limit(value: W): W {
         return (this._limit ? this._limit(value) : value);
+    }
+    //Owner
+    set(value: R) {
+        this._value = value;
+        this._updateSubscribers(value);
+    }
+    inUse(): boolean {
+        return Boolean(this._subscribers.length);
+    }
+    hasSubscriber(subscriber: StateSubscriber<R>): boolean {
+        return this._subscribers.includes(subscriber);
     }
 }
 
@@ -44,7 +50,7 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateWri
 export const createState = <R, W extends R = R>(init: R, setter?: StateUserSet<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
     let state = new StateClass<R, W>(init);
     if (setter) {
-        state._setter = (setter === true ? state.setAndUpdate : setter);
+        state._setter = (setter === true ? state.set : setter);
     }
     if (checker) {
         state._check = checker;
@@ -52,8 +58,5 @@ export const createState = <R, W extends R = R>(init: R, setter?: StateUserSet<R
     if (limiter) {
         state._limit = limiter;
     }
-    return {
-        state: state as StateWrite<R, W>,
-        set: state.setAndUpdate.bind(state) as StateSetter<R>
-    }
+    return state as StateOwner<R, W>
 }
