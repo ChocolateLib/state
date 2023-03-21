@@ -1,13 +1,13 @@
 import { StateBase } from "./stateBase";
 import { StateChecker, StateLimiter, StateInfo, StateWrite } from "./types";
 
-/**Function called when user sets value*/
-type Getter<R, W extends R = R> = (value: W, set: StateInfo<R>) => void
-
 export interface StateOwner<R, W extends R = R> extends StateWrite<R, W>, StateInfo<R> {
     /**Sets value of state and updates subscribers */
     set(value: R): void
 }
+
+/**Function called when user sets value*/
+type Getter<R, W extends R = R> = (value: W, set: StateOwner<R>) => void
 
 export class StateClass<R, W extends R> extends StateBase<R> implements StateOwner<R, W> {
     constructor(init: R) {

@@ -19,7 +19,7 @@ const generatePromises = (amount: number) => {
 describe('Getting state value', async function () {
     it('Async once fulfillment', async function () {
         let { promise, calls } = generatePromises(2)
-        let { state } = createStateAsync<number>(
+        let state = createStateAsync<number>(
             (state) => {
                 calls[0](0);
                 state.setFulfillment(0);
@@ -32,7 +32,7 @@ describe('Getting state value', async function () {
     });
     it('Async once rejection', async function () {
         let { promise, calls } = generatePromises(2)
-        let { state } = createStateAsync<number>(
+        let state = createStateAsync<number>(
             (state) => {
                 calls[0](0);
                 state.setRejection('Yo');
@@ -44,7 +44,7 @@ describe('Getting state value', async function () {
         await promise;
     });
     it('Using then with chaining return', function (done) {
-        let { state } = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
+        let state = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
         state.then((val) => {
             expect(val).equal(2);
             return 8;
@@ -54,7 +54,7 @@ describe('Getting state value', async function () {
         })
     });
     it('Using then with chaining throw', function (done) {
-        let { state } = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
+        let state = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
         state.then((val) => {
             expect(val).equal(2);
             throw 8;
@@ -64,7 +64,7 @@ describe('Getting state value', async function () {
         })
     });
     it('Using then with async chaining return', function (done) {
-        let { state } = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
+        let state = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
         state.then(async (val) => {
             await new Promise((a) => { setTimeout(a, 10) });
             expect(val).equal(2);
@@ -75,7 +75,7 @@ describe('Getting state value', async function () {
         })
     });
     it('Using then with async chaining throw', function (done) {
-        let { state } = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
+        let state = createStateAsync<number>((state) => { state.setFulfillment(2); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); }, () => { throw new Error('This should not be called'); });
         state.then(async (val) => {
             await new Promise((a) => { setTimeout(a, 10) });
             expect(val).equal(2);
@@ -86,28 +86,26 @@ describe('Getting state value', async function () {
         })
     });
     it('Awaiting async value', async function () {
-        let { state } = createTestAsync();
+        let state = createTestAsync();
         expect(await state).equal(1);
     });
 });
 
 describe('Async Setting value', function () {
     it('From user context with no setter function', async function (done) {
-        let { state } = createStateAsync<number>(
+        let state = createStateAsync<number>(
             () => { throw new Error('This should not be called'); },
             () => { throw new Error('This should not be called'); },
             () => { throw new Error('This should not be called'); },
-            () => {
-                done()
-            });
-        state.set(4)
+            () => { done() });
+        state.write(4)
     });
 });
 
 describe('Async subscribe', function () {
     it('Async subscribe', async function () {
         let { promise, calls } = generatePromises(3)
-        let { state } = createStateAsync<number>(() => { throw new Error('This should not be called'); }
+        let state = createStateAsync<number>(() => { throw new Error('This should not be called'); }
             , (state) => {
                 calls[0](0);
                 state.setLiveValue(0)
@@ -120,7 +118,7 @@ describe('Async subscribe', function () {
     });
     it('Async unsubscribe', async function () {
         let { promise, calls } = generatePromises(3)
-        let { state } = createStateAsync<number>(() => { throw new Error('This should not be called'); }
+        let state = createStateAsync<number>(() => { throw new Error('This should not be called'); }
             , (state) => {
                 calls[0](0);
                 state.setLiveValue(0)
@@ -133,7 +131,7 @@ describe('Async subscribe', function () {
     });
     it('Subscribing to async value', async function () {
         let func
-        let { state } = createTestAsync();
+        let state = createTestAsync();
         let value = await new Promise((a) => { func = state.subscribe(a); })
         expect(value).equal(1);
         state.unsubscribe(func)
