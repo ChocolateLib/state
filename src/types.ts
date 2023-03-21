@@ -1,10 +1,6 @@
 /**Function used to subscribe to state changes */
 export type StateSubscriber<R> = (val: R) => void
 
-/**Function called when user sets value*/
-export type StateUserSet<R, W extends R = R> = (value: W, set: StateOwner<R>) => void
-
-
 /**Function used to check if a value is within state limits*/
 export type StateChecker<W> = (value: W) => string | undefined
 
@@ -21,6 +17,13 @@ export interface StateRead<R> {
     unsubscribe<B extends StateSubscriber<R>>(func: B): B
 }
 
+export interface StateInfo<R> extends StateRead<R> {
+    /**Returns wether the state has subscribers, true means it has*/
+    inUse(): boolean
+    /**Returns wether the state has a specific subscriber*/
+    hasSubscriber(subscriber: StateSubscriber<R>): boolean
+}
+
 export interface StateWrite<R, W extends R = R> extends StateRead<R> {
     /** This sets the value of the state and updates all subscribers */
     write(value: W): void
@@ -29,31 +32,6 @@ export interface StateWrite<R, W extends R = R> extends StateRead<R> {
     /**Returns the given value modified to be within the states limits, or just the given value */
     limit(value: W): W
 }
-
-export interface StateOwner<R, W extends R = R> extends StateWrite<R, W> {
-    /**Sets value of state and updates subscribers */
-    set(value: R): void
-    /**Returns wether the state has subscribers, true means it has*/
-    inUse(): boolean
-    /**Returns wether the state has a specific subscriber*/
-    hasSubscriber(subscriber: StateSubscriber<R>): boolean
-}
-
-export interface StateAsync<R, W extends R = R> extends StateOwner<R, W> {
-    /**Called to fulfill any waiting promises for value */
-    setFulfillment(value: R): void
-    /**Called to reject any waiting promises for value, in case value is not retrievable */
-    setRejection(value: any): void
-    /**Called to update value and subscribers
-     * in normal cases valid should be set true
-     * when connection is lost to source, value is set to undefined, and valid is set to false*/
-    setLiveValue(value: R, invalidReason?: any): void
-}
-
-/**Function used to retrieve value from async source once*/
-export type StateAsyncRead<R> = (state: StateAsync<R>) => void
-/**Function used when user writes to async source*/
-export type StateAsyncWrite<R, W extends R = R> = (value: W, state: StateAsync<R>) => void
 
 
 export type StateEnumEntry = {

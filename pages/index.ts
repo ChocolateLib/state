@@ -1,4 +1,4 @@
-import { createState, createStateAsync, createStateAverager, createStateDerived } from "../src";
+import { createState, createStateAsync, createStateAverager, createStateDerived, createStateSummer, StateRead } from "../src";
 
 let yo: any[] = []
 declare global {
@@ -6,7 +6,7 @@ declare global {
 }
 window.yo = yo;
 
-for (let i = 0; i < 1000; i++) {
-    let state = createState(1, (val) => { state.set(val); });
+for (let i = 0; i < 500000; i++) {
+    let state = createStateSummer();
     yo[i] = state;
 }

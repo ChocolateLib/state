@@ -1,36 +1,41 @@
-import { StateSubscriber, StateRead } from "./types";
+import { StateSubscriber, StateRead, StateInfo } from "./types";
 import { StateBase } from "./stateBase";
 
 type Getter<T, I> = (value: I[]) => T
 
-class StateDerivedClass<O, I> extends StateBase<O | undefined> {
-    constructor(getter: Getter<O, I>, states?: StateRead<I>[]) {
+export interface StateDerivedOwner<O, I> extends StateInfo<O> {
+    /**Sets the states being derived from */
+    setStates(...states: StateRead<I>[]): void
+}
+class StateDerivedClass<O, I> extends StateBase<O | undefined> implements StateDerivedOwner<O | undefined, I> {
+    constructor(getter?: Getter<O, I>, states?: StateRead<I>[]) {
         super();
-        this._getter = getter;
-        if (states) {
+        if (getter)
+            this._getter = getter;
+        if (states)
             this._states = [...states];
-        }
     }
 
-    _valid: boolean = false;
-    _buffer: O | undefined;
+    private _valid: boolean = false;
+    private _buffer: O | undefined;
 
-    _states: StateRead<I>[] = [];
-    _stateBuffers: I[] = [];
-    _stateSubscribers: StateSubscriber<I>[] = [];
+    private _states: StateRead<I>[] = [];
+    private _stateBuffers: I[] = [];
+    private _stateSubscribers: StateSubscriber<I>[] = [];
 
-    _getter: Getter<O, I>;
-    _calculatingValue: boolean = false;
+    private _calculatingValue: boolean = false;
+    protected _getter(values: I[]): O {
+        return values[0] as any;
+    };
 
-    async _calculate() {
+    private async _calculate() {
         await undefined;
         this._buffer = this._getter(this._stateBuffers);
         this._valid = true;
         this._updateSubscribers(this._buffer)
         this._calculatingValue = false;
     }
-
-    _connect() {
+    private _connect() {
         for (let i = 0; i < this._states.length; i++) {
             this._stateSubscribers[i] = this._states[i].subscribe((val) => {
                 this._stateBuffers[i] = val;
@@ -42,23 +47,13 @@ class StateDerivedClass<O, I> extends StateBase<O | undefined> {
         }
     }
 
-    _disconnect() {
-        for (let i = 0; i < this._states.length; i++) {
+    private _disconnect() {
+        for (let i = 0; i < this._states.length; i++)
             this._states[i].unsubscribe(this._stateSubscribers[i]);
-        }
         this._stateSubscribers = [];
     }
 
-    setStates(...states: StateRead<I>[]) {
-        if (this._subscribers.length) {
-            this._disconnect();
-            this._states = [...states];
-            this._connect();
-        } else {
-            this._states = [...states];
-        }
-    }
-
+    //Read
     subscribe<B extends StateSubscriber<O | undefined>>(func: B, update: boolean): B {
         if (this._subscribers.length === 0) {
             this._subscribers.push(func);
@@ -69,9 +64,8 @@ class StateDerivedClass<O, I> extends StateBase<O | undefined> {
     }
 
     unsubscribe<B extends StateSubscriber<O | undefined>>(func: B): B {
-        if (this._subscribers.length === 1) {
+        if (this._subscribers.length === 1)
             this._disconnect();
-        }
         return super.unsubscribe(func);
     }
 
@@ -84,42 +78,51 @@ class StateDerivedClass<O, I> extends StateBase<O | undefined> {
             return func(undefined);
         }
     }
+    //Owner
+    setStates(...states: StateRead<I>[]) {
+        if (this._subscribers.length) {
+            this._disconnect();
+            this._states = [...states];
+            this._connect();
+        } else {
+            this._states = [...states];
+        }
+    }
 }
 
 /**Creates a state derives a value from other states
  * @param init initial value for state, use undefined to indicate that state does not have a value yet
  * @param getter function called when state value is set via setter, set true let state set it's own value */
 export const createStateDerived = <O, I>(getter: Getter<O, I>, ...states: StateRead<I>[]) => {
-    let derived = new StateDerivedClass<O, I>(getter, states);
-    return {
-        derived: derived as StateRead<O>,
-        setStates: derived.setStates.bind(derived) as (...states: StateRead<I>[]) => void,
-    }
+    return new StateDerivedClass<O, I>(getter, states) as StateDerivedOwner<number, number>;
 }
 
-const averageFunc = (values: number[]) => {
-    let sum = 0;
-    for (let i = 0; i < values.length; i++) { sum += values[i]; }
-    return sum / values.length;
-};
+class StateAverageClass extends StateDerivedClass<number, number> {
+    constructor(states?: StateRead<number>[]) {
+        super(undefined, states);
+    }
+    protected _getter(values: number[]) {
+        let sum = 0;
+        for (let i = 0; i < values.length; i++) { sum += values[i]; }
+        return sum / values.length;
+    };
+}
 /**Creates a state which keeps the avererage of the value of other states*/
 export const createStateAverager = (...states: StateRead<number>[]) => {
-    let derived = new StateDerivedClass<number, number>(averageFunc, states);
-    return {
-        derived: derived as StateRead<number>,
-        setStates: derived.setStates.bind(derived) as (...states: StateRead<number>[]) => void,
-    }
+    return new StateAverageClass(states)
 }
-const summerFunc = (values: number[]) => {
-    let sum = 0;
-    for (let i = 0; i < values.length; i++) { sum += values[i]; }
-    return sum;
-};
+
+class StateSummerClass extends StateDerivedClass<number, number> {
+    constructor(states?: StateRead<number>[]) {
+        super(undefined, states);
+    }
+    protected _getter(values: number[]) {
+        let sum = 0;
+        for (let i = 0; i < values.length; i++) { sum += values[i]; }
+        return sum;
+    };
+}
 /**Creates a state which keeps the sum of the value of other states*/
 export const createStateSummer = (...states: StateRead<number>[]) => {
-    let derived = new StateDerivedClass<number, number>(summerFunc, states);
-    return {
-        derived: derived as StateRead<number>,
-        setStates: derived.setStates.bind(derived) as (...states: StateRead<number>[]) => void,
-    }
+    return new StateSummerClass(states) as StateDerivedOwner<number, number>;
 }

@@ -1,7 +1,26 @@
 import { StateBase } from "./stateBase";
-import { StateWrite, StateChecker, StateLimiter, StateSubscriber, StateAsync, StateAsyncRead, StateAsyncWrite, StateOwner } from "./types";
+import { StateWrite, StateChecker, StateLimiter, StateSubscriber, StateInfo } from "./types";
 
-export class StateAsyncClass<R, W extends R> extends StateBase<R> implements StateAsync<R, W> {
+export interface StateAsyncOwner<R, W extends R = R> extends StateWrite<R, W>, StateInfo<R> {
+    /**Updates subscribers */
+    set(value: R): void
+    /**Called to fulfill any waiting promises for value */
+    setFulfillment(value: R): void
+    /**Called to reject any waiting promises for value, in case value is not retrievable */
+    setRejection(value: any): void
+    /**Called to update value and subscribers
+     * in normal cases valid should be set true
+     * when connection is lost to source, value is set to undefined, and valid is set to false*/
+    setLiveValue(value: R, invalidReason?: any): void
+}
+
+/**Function used to retrieve value from async source once*/
+export type StateAsyncRead<R> = (state: StateAsyncOwner<R>) => void
+
+/**Function used when user writes to async source*/
+export type StateAsyncWrite<R, W extends R = R> = (value: W, state: StateAsyncOwner<R>) => void
+
+export class StateAsyncClass<R, W extends R> extends StateBase<R> implements StateAsyncOwner<R, W> {
     constructor(once: StateAsyncRead<R>, setup: StateAsyncRead<R>, teardown: StateAsyncRead<R>) {
         super();
         this._once = once;
@@ -57,18 +76,16 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
                 });
                 return onfulfilled(value);
             } catch (error) {
-                if (onrejected) {
+                if (onrejected)
                     return onrejected(error);
-                }
                 throw error;
             }
         }
     }
     //Write
     write(value: W): void {
-        if (this._setter && this._buffer !== value) {
+        if (this._setter && this._buffer !== value)
             this._setter(value, this);
-        }
     }
     check(value: W): string | undefined {
         return (this._check ? this._check(value) : undefined)
@@ -81,12 +98,6 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
     set(value: R) {
         this._buffer = value;
         this._updateSubscribers(value);
-    }
-    inUse(): boolean {
-        return Boolean(this._subscribers.length);
-    }
-    hasSubscriber(subscriber: StateSubscriber<R>): boolean {
-        return this._subscribers.includes(subscriber);
     }
 
     //Async
@@ -103,17 +114,15 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
         }
     }
     setFulfillment(value: R) {
-        for (let i = 0; i < this._fulfillment.length; i++) {
-            this._fulfillment[i](value);
-        }
         this._rejections = [];
+        for (let i = 0; i < this._fulfillment.length; i++)
+            this._fulfillment[i](value);
         this._waiting = false;
     }
     setRejection(reason: any) {
-        for (let i = 0; i < this._rejections.length; i++) {
-            this._rejections[i](reason);
-        }
         this._fulfillment = [];
+        for (let i = 0; i < this._rejections.length; i++)
+            this._rejections[i](reason);
         this._waiting = false;
     }
 }
@@ -128,14 +137,11 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
  * @param limiter function to allow state users to limit a given value to state limit */
 export const createStateAsync = <R, W extends R = R>(once: StateAsyncRead<R>, setup: StateAsyncRead<R>, teardown: StateAsyncRead<R>, setter?: StateAsyncWrite<R, W>, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
     let state = new StateAsyncClass<R, W>(once, setup, teardown);
-    if (setter) {
+    if (setter)
         state._setter = setter;
-    }
-    if (checker) {
+    if (checker)
         state._check = checker;
-    }
-    if (limiter) {
+    if (limiter)
         state._limit = limiter;
-    }
-    return state as StateOwner<R, W>;
+    return state as StateAsyncOwner<R, W>;
 }

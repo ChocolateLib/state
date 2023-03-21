@@ -1,5 +1,13 @@
 import { StateBase } from "./stateBase";
-import { StateChecker, StateLimiter, StateUserSet, StateOwner, StateSubscriber } from "./types";
+import { StateChecker, StateLimiter, StateInfo, StateWrite } from "./types";
+
+/**Function called when user sets value*/
+type Getter<R, W extends R = R> = (value: W, set: StateInfo<R>) => void
+
+export interface StateOwner<R, W extends R = R> extends StateWrite<R, W>, StateInfo<R> {
+    /**Sets value of state and updates subscribers */
+    set(value: R): void
+}
 
 export class StateClass<R, W extends R> extends StateBase<R> implements StateOwner<R, W> {
     constructor(init: R) {
@@ -8,7 +16,7 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateOwn
     }
 
     _value: R;
-    _setter: StateUserSet<R, W> | undefined;
+    _setter: Getter<R, W> | undefined;
     _check: StateChecker<W> | undefined;
     _limit: StateLimiter<W> | undefined;
 
@@ -34,12 +42,6 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateOwn
         this._value = value;
         this._updateSubscribers(value);
     }
-    inUse(): boolean {
-        return Boolean(this._subscribers.length);
-    }
-    hasSubscriber(subscriber: StateSubscriber<R>): boolean {
-        return this._subscribers.includes(subscriber);
-    }
 }
 
 /**Creates a state which holds a value
@@ -47,16 +49,13 @@ export class StateClass<R, W extends R> extends StateBase<R> implements StateOwn
  * @param setter function called when state value is set via setter, set true let state set it's own value 
  * @param checker function to allow state users to check if a given value is valid for the state
  * @param limiter function to allow state users to limit a given value to state limit */
-export const createState = <R, W extends R = R>(init: R, setter?: StateUserSet<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
+export const createState = <R, W extends R = R>(init: R, setter?: Getter<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
     let state = new StateClass<R, W>(init);
-    if (setter) {
+    if (setter)
         state._setter = (setter === true ? state.set : setter);
-    }
-    if (checker) {
+    if (checker)
         state._check = checker;
-    }
-    if (limiter) {
+    if (limiter)
         state._limit = limiter;
-    }
     return state as StateOwner<R, W>
 }

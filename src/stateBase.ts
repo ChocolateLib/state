@@ -24,6 +24,13 @@ export abstract class StateBase<R> implements StateRead<R>{
         return func;
     }
 
+    inUse(): boolean {
+        return Boolean(this._subscribers.length);
+    }
+    hasSubscriber(subscriber: StateSubscriber<R>): boolean {
+        return this._subscribers.includes(subscriber);
+    }
+
     _updateSubscribers(value: R): void {
         for (let i = 0, m = this._subscribers.length; i < m; i++) {
             try {
