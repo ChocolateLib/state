@@ -1,7 +1,7 @@
 import { StateRead, StateSubscriber } from "./types";
 
 export abstract class StateBase<R> implements StateRead<R>{
-    _subscribers: StateSubscriber<R>[] = [];
+    protected _subscribers: StateSubscriber<R>[] = [];
     subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
         this._subscribers.push(func);
         if (update) {
@@ -31,7 +31,7 @@ export abstract class StateBase<R> implements StateRead<R>{
         return this._subscribers.includes(subscriber);
     }
 
-    _updateSubscribers(value: R): void {
+    protected _updateSubscribers(value: R): void {
         for (let i = 0, m = this._subscribers.length; i < m; i++) {
             try {
                 this._subscribers[i](value);

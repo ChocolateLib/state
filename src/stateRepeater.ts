@@ -19,7 +19,7 @@ export class StateRepeater<O, I> extends StateBase<O | undefined> implements Sta
     private _state: StateRead<I> | undefined;
     private _getter: Getter<O, I> | undefined;
 
-    _subscriber(value: I) {
+    private _subscriber(value: I) {
         this._valid = true;
         this._buffer = (this._getter ? this._getter(value) : <any>value);
         this._updateSubscribers(this._buffer);
