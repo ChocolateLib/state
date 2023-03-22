@@ -1,4 +1,4 @@
-import { createStateAsync } from "../../src";
+import { StateAsync } from "../../src";
 
 let calls: (() => void)[] = [];
 setInterval(() => {
@@ -10,7 +10,7 @@ export const createTestAsync = () => {
     let value: number = 0;
     let call: () => void
     setInterval(() => { value++ }, 500);
-    return createStateAsync<number | undefined, number>(async (state) => {
+    return new StateAsync<number | undefined, number>(async (state) => {
         console.warn('Async Test Once Called');
         await new Promise((a) => { setTimeout(a, 500) });
         state.setFulfillment(value);
