@@ -3,20 +3,21 @@ import { StateInfo, StateRead, StateSubscriber } from "./types";
 
 type Getter<T, I> = (value: I) => T
 
-export interface StateRepeaterOwner<O, I> extends StateInfo<O> {
-    /**Sets the state being repeated */
-    setState(state: StateRead<I> | undefined): void
-}
-class StateRepeaterClass<O, I> extends StateBase<O | undefined> implements StateRepeaterOwner<O | undefined, I> {
-    constructor(state?: StateRead<I>) {
+export class StateRepeater<O, I> extends StateBase<O | undefined> implements StateInfo<O | undefined> {
+    /**Creates a state which repeats the value of another state
+     * @param state the state to repeat
+     * @param getter function used to modify value repeated from state */
+    constructor(state?: StateRead<I>, getter?: Getter<O, I>) {
         super();
+        if (getter)
+            this._getter = getter;
         this._state = state;
     }
 
-    _valid: boolean = false;
-    _buffer: O | undefined;
-    _state: StateRead<I> | undefined;
-    _getter: Getter<O, I> | undefined;
+    private _valid: boolean = false;
+    private _buffer: O | undefined;
+    private _state: StateRead<I> | undefined;
+    private _getter: Getter<O, I> | undefined;
 
     _subscriber(value: I) {
         this._valid = true;
@@ -38,7 +39,7 @@ class StateRepeaterClass<O, I> extends StateBase<O | undefined> implements State
         }
     }
 
-    subscribe<B extends StateSubscriber<O | undefined>>(func: B, update: boolean): B {
+    subscribe<B extends StateSubscriber<O | undefined>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0 && this._state) {
             this._subscribers.push(func);
             this._state.subscribe(this._subscriber.bind(this));
@@ -64,14 +65,4 @@ class StateRepeaterClass<O, I> extends StateBase<O | undefined> implements State
             return func(undefined);
         }
     }
-}
-
-/**Creates a state which repeats the value of another state
- * @param state the state to repeat
- * @param getter function used to modify value repeated from state */
-export const createStateRepeater = <O, I>(state?: StateRead<I>, getter?: Getter<O, I>) => {
-    let repeater = new StateRepeaterClass<O, I>(state);
-    if (getter)
-        repeater._getter = getter;
-    return repeater as StateRepeaterOwner<O, I>
 }

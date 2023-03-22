@@ -1,50 +1,51 @@
 import { StateBase } from "./stateBase";
-import { StateWrite, StateChecker, StateLimiter, StateSubscriber, StateInfo } from "./types";
-
-export interface StateAsyncOwner<R, W extends R = R> extends StateWrite<R, W>, StateInfo<R> {
-    /**Updates subscribers */
-    set(value: R): void
-    /**Called to fulfill any waiting promises for value */
-    setFulfillment(value: R): void
-    /**Called to reject any waiting promises for value, in case value is not retrievable */
-    setRejection(value: any): void
-    /**Called to update value and subscribers
-     * in normal cases valid should be set true
-     * when connection is lost to source, value is set to undefined, and valid is set to false*/
-    setLiveValue(value: R, invalidReason?: any): void
-}
+import { StateChecker, StateInfo, StateLimiter, StateSubscriber, StateWrite } from "./types";
 
 /**Function used to retrieve value from async source once*/
-export type StateAsyncRead<R> = (state: StateAsyncOwner<R>) => void
+type StateAsyncRead<R, W extends R = R> = (state: StateAsync<R, W>) => void
 
 /**Function used when user writes to async source*/
-export type StateAsyncWrite<R, W extends R = R> = (value: W, state: StateAsyncOwner<R>) => void
+type StateAsyncWrite<R, W extends R = R> = (value: W, state: StateAsync<R, W>) => void
 
-export class StateAsyncClass<R, W extends R> extends StateBase<R> implements StateAsyncOwner<R, W> {
-    constructor(once: StateAsyncRead<R>, setup: StateAsyncRead<R>, teardown: StateAsyncRead<R>) {
+export class StateAsync<R, W extends R = R> extends StateBase<R> implements StateWrite<R, W>, StateInfo<R> {
+    /**Creates a state which connects to an async source and keeps updated with any changes to the source
+     * @param init initial value for state, use undefined to indicate that state does not have a value yet
+     * @param once function called when state value is requested once, the function should throw if it fails to get data
+     * @param setup function called when state is being used to setup live update of value
+     * @param teardown function called when state is no longer being used to teardown/cleanup communication
+     * @param setter function called when state value is set via setter, set true let state set it's own value 
+     * @param checker function to allow state users to check if a given value is valid for the state
+     * @param limiter function to allow state users to limit a given value to state limit */
+    constructor(once: StateAsyncRead<R, W>, setup: StateAsyncRead<R, W>, teardown: StateAsyncRead<R, W>, setter?: StateAsyncWrite<R, W>, checker?: StateChecker<W>, limiter?: StateLimiter<W>) {
         super();
+        if (setter)
+            this._setter = setter;
+        if (checker)
+            this._check = checker;
+        if (limiter)
+            this._limit = limiter;
         this._once = once;
         this._setup = setup;
         this._teardown = teardown;
     }
 
-    _isLive: boolean = false;
-    _valid: boolean = false;
-    _buffer: R | undefined;
+    private _isLive: boolean = false;
+    private _valid: boolean = false;
+    private _buffer: R | undefined;
 
-    _once: StateAsyncRead<R>;
-    _setup: StateAsyncRead<R>;
-    _teardown: StateAsyncRead<R>;
-    _waiting: boolean = false;
-    _fulfillment: ((value: R | PromiseLike<R>) => void)[] = [];
-    _rejections: ((reason?: any) => void)[] = [];
+    private _once: StateAsyncRead<R, W>;
+    private _setup: StateAsyncRead<R, W>;
+    private _teardown: StateAsyncRead<R, W>;
+    private _waiting: boolean = false;
+    private _fulfillment: ((value: R | PromiseLike<R>) => void)[] = [];
+    private _rejections: ((reason?: any) => void)[] = [];
 
-    _setter: StateAsyncWrite<R, W> | undefined;
-    _check: StateChecker<W> | undefined;
-    _limit: StateLimiter<W> | undefined;
+    private _setter: StateAsyncWrite<R, W> | undefined;
+    private _check: StateChecker<W> | undefined;
+    private _limit: StateLimiter<W> | undefined;
 
     //Read
-    subscribe<B extends StateSubscriber<R>>(func: B, update: boolean): B {
+    subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0) {
             this._isLive = true;
             this._subscribers.push(func);
@@ -125,23 +126,4 @@ export class StateAsyncClass<R, W extends R> extends StateBase<R> implements Sta
             this._rejections[i](reason);
         this._waiting = false;
     }
-}
-
-/**Creates a state which connects to an async source and keeps updated with any changes to the source
- * @param init initial value for state, use undefined to indicate that state does not have a value yet
- * @param once function called when state value is requested once, the function should throw if it fails to get data
- * @param setup function called when state is being used to setup live update of value
- * @param teardown function called when state is no longer being used to teardown/cleanup communication
- * @param setter function called when state value is set via setter, set true let state set it's own value 
- * @param checker function to allow state users to check if a given value is valid for the state
- * @param limiter function to allow state users to limit a given value to state limit */
-export const createStateAsync = <R, W extends R = R>(once: StateAsyncRead<R>, setup: StateAsyncRead<R>, teardown: StateAsyncRead<R>, setter?: StateAsyncWrite<R, W>, checker?: StateChecker<W>, limiter?: StateLimiter<W>) => {
-    let state = new StateAsyncClass<R, W>(once, setup, teardown);
-    if (setter)
-        state._setter = setter;
-    if (checker)
-        state._check = checker;
-    if (limiter)
-        state._limit = limiter;
-    return state as StateAsyncOwner<R, W>;
 }

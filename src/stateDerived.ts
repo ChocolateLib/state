@@ -3,12 +3,11 @@ import { StateBase } from "./stateBase";
 
 type Getter<T, I> = (value: I[]) => T
 
-export interface StateDerivedOwner<O, I> extends StateInfo<O> {
-    /**Sets the states being derived from */
-    setStates(...states: StateRead<I>[]): void
-}
-class StateDerivedClass<O, I> extends StateBase<O | undefined> implements StateDerivedOwner<O | undefined, I> {
-    constructor(getter?: Getter<O, I>, states?: StateRead<I>[]) {
+export class StateDerived<O, I> extends StateBase<O | undefined> implements StateInfo<O | undefined> {
+    /**Creates a state derives a value from other states
+     * @param init initial value for state, use undefined to indicate that state does not have a value yet
+     * @param getter function called when state value is set via setter, set true let state set it's own value */
+    constructor(getter?: Getter<O, I>, ...states: StateRead<I>[]) {
         super();
         if (getter)
             this._getter = getter;
@@ -54,7 +53,7 @@ class StateDerivedClass<O, I> extends StateBase<O | undefined> implements StateD
     }
 
     //Read
-    subscribe<B extends StateSubscriber<O | undefined>>(func: B, update: boolean): B {
+    subscribe<B extends StateSubscriber<O | undefined>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0) {
             this._subscribers.push(func);
             this._connect();
@@ -90,16 +89,10 @@ class StateDerivedClass<O, I> extends StateBase<O | undefined> implements StateD
     }
 }
 
-/**Creates a state derives a value from other states
- * @param init initial value for state, use undefined to indicate that state does not have a value yet
- * @param getter function called when state value is set via setter, set true let state set it's own value */
-export const createStateDerived = <O, I>(getter: Getter<O, I>, ...states: StateRead<I>[]) => {
-    return new StateDerivedClass<O, I>(getter, states) as StateDerivedOwner<number, number>;
-}
-
-class StateAverageClass extends StateDerivedClass<number, number> {
-    constructor(states?: StateRead<number>[]) {
-        super(undefined, states);
+export class StateAverage extends StateDerived<number, number> {
+    /**Creates a state which keeps the avererage of the value of other states*/
+    constructor(...states: StateRead<number>[]) {
+        super(undefined, ...states);
     }
     protected _getter(values: number[]) {
         let sum = 0;
@@ -107,22 +100,15 @@ class StateAverageClass extends StateDerivedClass<number, number> {
         return sum / values.length;
     };
 }
-/**Creates a state which keeps the avererage of the value of other states*/
-export const createStateAverager = (...states: StateRead<number>[]) => {
-    return new StateAverageClass(states)
-}
 
-class StateSummerClass extends StateDerivedClass<number, number> {
-    constructor(states?: StateRead<number>[]) {
-        super(undefined, states);
+export class StateSummer extends StateDerived<number, number> {
+    /**Creates a state which keeps the sum of the value of other states*/
+    constructor(...states: StateRead<number>[]) {
+        super(undefined, ...states);
     }
     protected _getter(values: number[]) {
         let sum = 0;
         for (let i = 0; i < values.length; i++) { sum += values[i]; }
         return sum;
     };
-}
-/**Creates a state which keeps the sum of the value of other states*/
-export const createStateSummer = (...states: StateRead<number>[]) => {
-    return new StateSummerClass(states) as StateDerivedOwner<number, number>;
 }
