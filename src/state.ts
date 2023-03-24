@@ -2,7 +2,7 @@ import { StateBase } from "./stateBase";
 import { StateChecker, StateInfo, StateLimiter, StateWrite } from "./types";
 
 /**Function called when user sets value*/
-type Getter<R, W extends R = R> = (value: W, set: State<R, W>) => void
+export type StateSetter<R, W extends R = R> = (value: W, set: State<R, W>) => void
 
 export class State<R, W extends R = R> extends StateBase<R> implements StateWrite<R, W>, StateInfo<R> {
     /**Creates a state which holds a value
@@ -10,7 +10,7 @@ export class State<R, W extends R = R> extends StateBase<R> implements StateWrit
      * @param setter function called when state value is set via setter, set true let state set it's own value 
      * @param checker function to allow state users to check if a given value is valid for the state
      * @param limiter function to allow state users to limit a given value to state limit */
-    constructor(init: R, setter?: Getter<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) {
+    constructor(init: R, setter?: StateSetter<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) {
         super();
         if (setter)
             this._setter = (setter === true ? this.set : setter);
@@ -22,7 +22,7 @@ export class State<R, W extends R = R> extends StateBase<R> implements StateWrit
     }
 
     private _value: R;
-    private _setter: Getter<R, W> | undefined;
+    private _setter: StateSetter<R, W> | undefined;
     private _check: StateChecker<W> | undefined;
     private _limit: StateLimiter<W> | undefined;
 
