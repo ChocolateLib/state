@@ -1,10 +1,7 @@
-import { State } from "../src";
+import { State, StateNumber, StateNumberLimits } from "../src";
 
-let yo: any[] = []
+let yo: StateNumberLimits[] = []
 declare global {
     interface Window { yo: any; }
 }
 window.yo = yo;
-
-let test = new State(1)
-

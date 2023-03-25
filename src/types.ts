@@ -32,32 +32,3 @@ export interface StateWrite<R, W extends R = R> extends StateRead<R> {
     /**Returns the given value modified to be within the states limits, or just the given value */
     limit(value: W): W
 }
-
-
-export type StateEnumEntry = {
-    name: string,
-    description?: string,
-    icon?: () => SVGSVGElement,
-}
-
-export type StateEnumList = {
-    [key: string | number]: StateEnumEntry
-}
-
-export interface StateNumberStepLimits {
-    /**Size of steps, eg 2 means 2,4,6,8 are allowed*/
-    size: number,
-    /**Step start, eg with size 1 and start 0.2, 0.2,1.2,2.2 are allowed */
-    start?: number,
-}
-
-export interface StateNumberLimits {
-    min?: number;
-    max?: number;
-    step?: StateNumberStepLimits;
-}
-
-export interface StateStringLimits {
-    maxLength?: number,
-    maxByteLength?: number,
-}
