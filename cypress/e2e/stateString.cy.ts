@@ -19,7 +19,19 @@ describe('Setting state value', function () {
         let state = new StateString('2');
         expect(await state).equal('2');
         state.write('4')
+        expect(await state).equal('2');
+    });
+    it('From user context with standard setter function', async function () {
+        let state = new StateString('2', true);
+        expect(await state).equal('2');
+        state.set('4')
         expect(await state).equal('4');
+    });
+    it('From user context with custom function', async function () {
+        let state = new StateString('2', (val, state) => { state.set(val + '2'); });
+        expect(await state).equal('2');
+        state.write('4')
+        expect(await state).equal('42');
     });
 });
 
@@ -141,7 +153,7 @@ describe('Value subscriber', function () {
 
 describe('Number limits', function () {
     it('Max length', async function () {
-        let state = new StateString('2', new StateStringLimits(5));
+        let state = new StateString('2', true, new StateStringLimits(5));
         expect(await state).equal('2');
         state.write('1')
         expect(await state).equal('1');
@@ -149,7 +161,7 @@ describe('Number limits', function () {
         expect(await state).equal('99999');
     });
     it('Max bytes', async function () {
-        let state = new StateString('2', new StateStringLimits(99, 40));
+        let state = new StateString('2', true, new StateStringLimits(99, 40));
         expect(await state).equal('2');
         state.write('1')
         expect(await state).equal('1');

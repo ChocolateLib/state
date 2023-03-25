@@ -21,6 +21,18 @@ describe('Setting state value', function () {
         state.set(4)
         expect(await state).equal(4);
     });
+    it('From user context with standard setter function', async function () {
+        let state = new StateNumber(2, true);
+        expect(await state).equal(2);
+        state.set(4)
+        expect(await state).equal(4);
+    });
+    it('From user context with custom function', async function () {
+        let state = new StateNumber(2, (val, state) => { state.set(val * 2); });
+        expect(await state).equal(2);
+        state.write(4)
+        expect(await state).equal(8);
+    });
 });
 
 describe('Getting state value', async function () {
@@ -141,7 +153,7 @@ describe('Value subscriber', function () {
 
 describe('Number limits', function () {
     it('Min max', async function () {
-        let state = new StateNumber(2, new StateNumberLimits(5, 54));
+        let state = new StateNumber(2, true, new StateNumberLimits(5, 54));
         expect(await state).equal(2);
         state.write(1)
         expect(await state).equal(5);
@@ -149,19 +161,19 @@ describe('Number limits', function () {
         expect(await state).equal(54);
     });
     it('Step sizes', async function () {
-        let state = new StateNumber(2, new StateNumberLimits(undefined, undefined, 0.22));
+        let state = new StateNumber(2, true, new StateNumberLimits(undefined, undefined, 0.22));
         expect(await state).equal(2);
         state.write(4)
         expect(await state).equal(3.96);
     });
     it('Step sizes and offset', async function () {
-        let state = new StateNumber(2, new StateNumberLimits(undefined, undefined, 0.22, 0.12));
+        let state = new StateNumber(2, true, new StateNumberLimits(undefined, undefined, 0.22, 0.12));
         expect(await state).equal(2);
         state.write(4)
         expect(await state).equal(4.08);
     });
     it('Step sizes and offset and min max', async function () {
-        let state = new StateNumber(2, new StateNumberLimits(8, 77, 0.22, 0.12));
+        let state = new StateNumber(2, true, new StateNumberLimits(8, 77, 0.22, 0.12));
         expect(await state).equal(2);
         state.write(4)
         expect(await state).equal(8);

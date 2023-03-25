@@ -1,4 +1,4 @@
-import { State, StateNumber, StateNumberLimits } from "../src";
+import { State, StateNumberLimits } from "../src";
 
 let yo: StateNumberLimits[] = []
 declare global {
