@@ -1,97 +1,183 @@
 /// <reference types="cypress" />
-import { StateNumber } from "../../src"
+import { StateNumber, StateNumberLimits } from "../../src"
 
-describe('Setup', function () {
-    it('Should have an initial value of undefined', async function () {
-        expect(await (new StateNumber())).equal(undefined);
-    });
-    it('Should have an initial value of 0', async function () {
-        expect(await (new StateNumber(0))).equal(0);
+describe('Initial state', function () {
+    it('Creating a state with initial value', async function () {
+        let state = new StateNumber(2);
+        expect(await state).equal(2);
     });
 });
 
-describe('Limiting', function () {
-    it('Minimum is accessible', function () {
-        expect((new StateNumber(5, { min: 2, max: 5 })).min).equal(2);
-    });
-    it('Maximum is accessible', function () {
-        expect((new StateNumber(5, { max: 5 })).max).equal(5);
-    });
-    it('Step size is accessible', function () {
-        expect((new StateNumber(5, { decimals: 6 })).decimals).equal(6);
-    });
-    it('Step size is accessible', function () {
-        expect((new StateNumber(5, { step: { size: 0.1 } })).step).deep.equal({ size: 0.1 });
-    });
-})
-
-describe('Limiting', function () {
-    it('None limited number', async function () {
-        let state = new StateNumber(5);
-        expect(await state).equal(5);
-        state.set = 100;
-        expect(await state).equal(100);
-        state.set = -100;
-        expect(await state).equal(-100);
-    });
-    it('Limiter to numbers between 2 and 8', async function () {
-        let value = new StateNumber(5, { min: 2, max: 8 });
-        expect(await value).equal(5);
-        value.set = 10;
-        expect(await value).equal(8);
-        value.set = 0;
-        expect(await value).equal(2);
-    });
-});
-
-describe('Step', function () {
-    it('Step size 2', async function () {
-        let state = new StateNumber(0, { step: { size: 2 } });
-        state.set = 4;
+describe('Setting state value', function () {
+    it('From owner context', async function () {
+        let state = new StateNumber(2);
+        expect(await state).equal(2);
+        state.set(4)
         expect(await state).equal(4);
-        state.set = 5.5;
-        expect(await state).equal(6);
     });
-    it('Step size 2 start 1', async function () {
-        let state = new StateNumber(0, { step: { size: 2, start: 1 } });
-        state.set = 3;
-        expect(await state).equal(3);
-        state.set = 5.5;
+    it('From user context with standard setter function', async function () {
+        let state = new StateNumber(2);
+        expect(await state).equal(2);
+        state.set(4)
+        expect(await state).equal(4);
+    });
+    it('From user context with standard setter function', async function () {
+        let state = new StateNumber(2, true);
+        expect(await state).equal(2);
+        state.set(4)
+        expect(await state).equal(4);
+    });
+    it('From user context with custom function', async function () {
+        let state = new StateNumber(2, (val, state) => { state.set(val * 2); });
+        expect(await state).equal(2);
+        state.write(4)
+        expect(await state).equal(8);
+    });
+});
+
+describe('Getting state value', async function () {
+    it('Using await', async function () {
+        let state = new StateNumber(2);
+        expect(await state).equal(2);
+    });
+    it('Using then', function (done) {
+        let state = new StateNumber(2);
+        state.then((val) => {
+            expect(val).equal(2);
+            done()
+        })
+    });
+    it('Using then with chaining return', function (done) {
+        let state = new StateNumber(2);
+        state.then((val) => {
+            expect(val).equal(2);
+            return 8;
+        }).then((val) => {
+            expect(val).equal(8);
+            done()
+        })
+    });
+    it('Using then with chaining throw', function (done) {
+        let state = new StateNumber(2);
+        state.then((val) => {
+            expect(val).equal(2);
+            throw 8;
+        }).then(() => { }, (val) => {
+            expect(val).equal(8);
+            done()
+        })
+    });
+    it('Using then with async chaining return', function (done) {
+        let state = new StateNumber(2);
+        state.then(async (val) => {
+            await new Promise((a) => { setTimeout(a, 10) });
+            expect(val).equal(2);
+            return 8;
+        }).then((val) => {
+            expect(val).equal(8);
+            done()
+        })
+    });
+    it('Using then with async chaining throw', function (done) {
+        let state = new StateNumber(2);
+        state.then(async (val) => {
+            await new Promise((a) => { setTimeout(a, 10) });
+            expect(val).equal(2);
+            throw 8;
+        }).then(() => { }, (val) => {
+            expect(val).equal(8);
+            done()
+        })
+    });
+});
+
+
+describe('Value subscriber', function () {
+    it('Add one subscribers with update set true', function () {
+        let state = new StateNumber(2);
+        state.subscribe((value) => { }, true);
+    });
+    it('Add one subscribers with update set true', function () {
+        let state = new StateNumber(2);
+        state.subscribe((value) => { expect(value).equal(2); }, true);
+    });
+    it('Add two subscribers with update set true', async function () {
+        let state = new StateNumber(2);
+        let values = await Promise.all([
+            new Promise<number>((a) => { state.subscribe(a, true) }),
+            new Promise<number>((a) => { state.subscribe(a, true) }),
+        ])
+        expect(values).deep.equal([2, 2]);
+    });
+    it('Insert two subscribers then remove first subscribers', function (done) {
+        let state = new StateNumber(2);
+        let func = state.subscribe(() => { }, true);
+        state.subscribe(() => { done() }, false);
+        expect(state.inUse()).deep.equal(true);
+        state.unsubscribe(func);
+        expect(state.inUse()).deep.equal(true);
+        state.set(4)
+    });
+    it('Insert two subscribers then removeing both subscribers', function (done) {
+        let state = new StateNumber(2);
+        let sum = 0
+        let func1 = state.subscribe(() => { done('Should not be called') }, false);
+        let func2 = state.subscribe(() => { done('Should not be called') }, false);
+        expect(state.inUse()).deep.equal(true);
+        state.unsubscribe(func1);
+        state.unsubscribe(func2);
+        expect(state.inUse()).deep.equal(false);
+        state.set(4)
+        done();
+    });
+    it('Setting value with one subscribers', function (done) {
+        let state = new StateNumber(2);
+        state.subscribe((val) => { done() }, false);
+        state.set(10);
+    });
+    it('Setting value with multiple subscribers', async function () {
+        let state = new StateNumber(2);
+        let sum = 0
+        state.subscribe((val) => { sum += val }, true)
+        state.subscribe((val) => { sum += val }, true)
+        state.subscribe((val) => { sum += val }, true)
+        state.set(10);
+        expect(sum).equal(36);
+    });
+    it('Setting value with subscribers with exception', function () {
+        let state = new StateNumber(2);
+        state.subscribe((val) => { throw false }, false);
+        state.set(10);
+    });
+});
+
+describe('Number limits', function () {
+    it('Min max', async function () {
+        let state = new StateNumber(2, true, new StateNumberLimits(5, 54));
+        expect(await state).equal(2);
+        state.write(1)
         expect(await state).equal(5);
+        state.write(99)
+        expect(await state).equal(54);
     });
-    it('Step size 0.12', async function () {
-        let state = new StateNumber(0, { step: { size: 0.12 } });
-        state.set = 3.96;
+    it('Step sizes', async function () {
+        let state = new StateNumber(2, true, new StateNumberLimits(undefined, undefined, 0.22));
+        expect(await state).equal(2);
+        state.write(4)
         expect(await state).equal(3.96);
-        state.set = 5.5;
-        expect(await state).equal(5.52);
     });
-    it('Step size 0.12 start 0.3', async function () {
-        let state = new StateNumber(0, { step: { size: 0.12, start: 0.3 } });
-        state.set = 4.02;
-        expect(await state).equal(4.02);
-        state.set = 5.5;
-        expect(await state).equal(5.46);
+    it('Step sizes and offset', async function () {
+        let state = new StateNumber(2, true, new StateNumberLimits(undefined, undefined, 0.22, 0.12));
+        expect(await state).equal(2);
+        state.write(4)
+        expect(await state).equal(4.08);
     });
-    it('Step size 2 start 0.3', async function () {
-        let state = new StateNumber(0, { step: { size: 2, start: 0.3 } });
-        state.set = 2.3;
-        expect(await state).equal(2.3);
-        state.set = 5.5;
-        expect(await state).equal(6.3);
-    });
-    it('Step size 2 start 0.3', async function () {
-        let state = new StateNumber(0, { step: { size: 0.12, start: 2 } });
-        state.set = 3.92;
-        expect(await state).equal(3.92);
-        state.set = 5.5;
-        expect(await state).equal(5.48);
-    });
-    it('Step size 2 start 0.3', async function () {
-        let state = new StateNumber(0, { step: { size: 0.012, start: 0.01 } });
-        state.set = 1.198;
-        expect(await state).equal(1.198);
-        state.set = 2.2;
-        expect(await state).equal(2.206);
+    it('Step sizes and offset and min max', async function () {
+        let state = new StateNumber(2, true, new StateNumberLimits(8, 77, 0.22, 0.12));
+        expect(await state).equal(2);
+        state.write(4)
+        expect(await state).equal(8);
+        state.write(90)
+        expect(await state).equal(77);
     });
 });

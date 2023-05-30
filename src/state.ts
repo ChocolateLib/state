@@ -1,76 +1,53 @@
-import { State, StateBase, StateDefaultOptions, StateSetter, StateSubscriber } from "./shared";
+import { StateBase } from "./stateBase";
+import { StateChecker, StateInfo, StateLimiter, StateWrite } from "./types";
 
-export interface StateValueOptions extends StateDefaultOptions {
-    writeable?: boolean
-};
+/**Function called when user sets value*/
+export type StateSetter<R, W extends R = R> = (value: W, set: State<R, W>) => void
 
-class StateValue<T> extends StateBase<T, StateValueOptions> {
-    constructor(init: T) {
+export class State<R, W extends R = R> extends StateBase<R> implements StateWrite<R, W>, StateInfo<R> {
+    /**Creates a state which holds a value
+     * @param init initial value for state, use undefined to indicate that state does not have a value yet
+     * @param setter function called when state value is set via setter, set true let state set it's own value 
+     * @param checker function to allow state users to check if a given value is valid for the state
+     * @param limiter function to allow state users to limit a given value to state limit */
+    constructor(init: R, setter?: StateSetter<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) {
         super();
-        this.value = init;
+        if (setter)
+            this._setter = (setter === true ? this.set : setter);
+        if (checker)
+            this._check = checker;
+        if (limiter)
+            this._limit = limiter;
+        this._value = init;
     }
 
-    //Internal
-    value: T;
-    externalSetter: StateSetter<T> | undefined;
+    private _value: R;
+    private _setter: StateSetter<R, W> | undefined;
+    private _check: StateChecker<W> | undefined;
+    private _limit: StateLimiter<W> | undefined;
 
-    setAndUpdate(value: T) {
-        this.value = value;
-        this.updateSubscribers(value);
+    //Read
+    async then<TResult1 = R>(func: ((value: R) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
+        return await func(this._value);
     }
 
-    setOptionAndUpdate(options: StateValueOptions) {
-        this.options = { ...this.options, ...options };
-        this.updateOptionsSubscribers(options);
-    }
-
-    //Subscribe
-    subscribe<B extends StateSubscriber<T>>(func: B, update?: boolean): B {
-        if (update) {
-            try {
-                func(this.value);
-            } catch (error) {
-                console.warn('Failed while calling update function', this, func);
-            }
-        }
-        return super.subscribe(func);
-    }
-
-    //Setting
-    set(value: T): void {
-        if (this.options?.writeable && this.externalSetter && this.value !== value) {
-            this.externalSetter(value)
+    //Write
+    write(value: W): void {
+        if (this._setter && this._value !== value) {
+            this._setter(value, this);
         }
     }
-
-    //Getting
-    writeable(): boolean {
-        return !!this.options?.writeable;
+    check(value: W): string | undefined {
+        return (this._check ? this._check(value) : undefined)
     }
 
-    get(): T {
-        return this.value
+    limit(value: W): W {
+        return (this._limit ? this._limit(value) : value);
     }
 
-    async then<TResult1 = T>(func: ((value: T) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        return await func(this.value);
-    }
-}
-
-/**Creates a state which holds a value
- * @param init initial value for state, use undefined to indicate that state does not have a value yet
- * @param setter function called when state value is set via setter, set true to just have */
-export const createState = <T = undefined>(init?: T, setter?: StateSetter<T> | boolean, options?: StateValueOptions) => {
-    let state = new StateValue<T>(init as T);
-    if (setter) {
-        state.externalSetter = (setter === true ? state.setAndUpdate : setter);
-    }
-    if (options) {
-        state.options = options;
-    }
-    return {
-        state: state as State<T, StateValueOptions>,
-        set: state.setAndUpdate.bind(state) as (value: T) => void,
-        setOptions: state.setOptionAndUpdate.bind(state) as (options: StateValueOptions) => void,
+    //Owner
+    set(value: R) {
+        this._value = value;
+        this._updateSubscribers(value);
     }
 }
