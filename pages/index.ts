@@ -5,3 +5,5 @@ declare global {
     interface Window { yo: any; }
 }
 window.yo = yo;
+
+console.log(new State(1));

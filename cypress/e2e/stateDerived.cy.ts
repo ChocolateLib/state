@@ -4,11 +4,11 @@ import { createTestAsync } from "./testAsync";
 
 
 describe('Getting value', function () {
-    it('Getting value from ValueMulti with no Values', async function () {
+    it('Getting value from ValueDerived with no Values', async function () {
         let derived = new StateDerived(() => { });
         expect(await derived).equal(undefined);
     });
-    it('Getting value from ValueMulti with Value with read function set', async function () {
+    it('Getting value from ValueDerived with Value with read function set', async function () {
         let state1 = new State(5);
         let state2 = new State(6);
         let derived = new StateDerived(([a, b]) => { return a * b }, ...[state1, state2],);
@@ -17,7 +17,7 @@ describe('Getting value', function () {
 });
 
 describe('Subscribers', function () {
-    it('If a subscriber is added to a ValueMulti, it start listening to all Values', function (done) {
+    it('If a subscriber is added to a ValueDerived, it start listening to all Values', function (done) {
         let state1 = new State(1);
         let state2 = new State(2);
         let state3 = new State(3);
@@ -27,7 +27,7 @@ describe('Subscribers', function () {
             done();
         }, true);
     });
-    it('If a subscriber is added to a ValueMulti, it start listening to all Values', function (done) {
+    it('If a subscriber is added to a ValueDerived, it start listening to all Values', function (done) {
         let state1 = new State(1);
         let state2 = new State(2);
         let state3 = new State(3);
@@ -40,7 +40,7 @@ describe('Subscribers', function () {
         state2.set(3);
         state3.set(4);
     });
-    it('If a subscriber is added to a ValueMulti then removed, the Values should not have listeners', function () {
+    it('If a subscriber is added to a ValueDerived then removed, the Values should not have listeners', function () {
         let state1 = new State(1);
         let state2 = new State(2);
         let state3 = new State(3);
@@ -51,7 +51,7 @@ describe('Subscribers', function () {
 });
 
 describe('Error Angles', function () {
-    it('If an array is passed to the ValueMulti, and the array is modified, the ValueMulti shall not be affected', async function () {
+    it('If an array is passed to the ValueDerived, and the array is modified, the ValueDerived shall not be affected', async function () {
         let state1 = new State(1);
         let state2 = new State(2);
         let state3 = new State(3);
@@ -65,7 +65,7 @@ describe('Error Angles', function () {
 });
 
 describe('Average', function () {
-    it('If an array is passed to the ValueMulti, and the array is modified, the ValueMulti shall not be affected', async function () {
+    it('If an array is passed to the ValueDerived, and the array is modified, the ValueDerived shall not be affected', async function () {
         let state1 = new State(1);
         let state2 = new State(2);
         let state3 = new State(3);
@@ -78,7 +78,7 @@ describe('Average', function () {
 });
 
 describe('Sum', function () {
-    it('If an array is passed to the ValueMulti, and the array is modified, the ValueMulti shall not be affected', async function () {
+    it('If an array is passed to the ValueDerived, and the array is modified, the ValueDerived shall not be affected', async function () {
         let state1 = new State(1);
         let state2 = new State(2);
         let state3 = new State(3);
@@ -91,7 +91,7 @@ describe('Sum', function () {
 });
 
 describe('Error Angles', function () {
-    it('If an array is passed to the ValueMulti, and the array is modified, the ValueMulti shall not be affected', async function () {
+    it('If an array is passed to the ValueDerived, and the array is modified, the ValueDerived shall not be affected', async function () {
         let state1 = new State(1);
         let state2 = new State(2);
         let state3 = new State(3);
