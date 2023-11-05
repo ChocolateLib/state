@@ -1,9 +1,10 @@
+import { Err, Ok, Result } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateInfo, StateRead, StateSubscriber } from "./types";
+import { StateError, StateInfo, StateRead, StateSubscriber } from "./types";
 
-type Getter<T, I> = (value: I) => T
+type Getter<O, I> = (value: Result<I, StateError>) => Result<O, StateError>
 
-export class StateRepeater<O, I> extends StateBase<O | undefined> implements StateInfo<O | undefined> {
+export class StateRepeater<O, I> extends StateBase<O> implements StateInfo<O> {
     /**Creates a state which repeats the value of another state
      * @param state the state to repeat
      * @param getter function used to modify value repeated from state */
@@ -15,14 +16,18 @@ export class StateRepeater<O, I> extends StateBase<O | undefined> implements Sta
     }
 
     private _valid: boolean = false;
-    private _buffer: O | undefined;
+    private _buffer: Result<O, StateError> | undefined;
     private _state: StateRead<I> | undefined;
     private _getter: Getter<O, I> | undefined;
 
-    private _subscriber(value: I) {
+    private _subscriber(value: I, error?: StateError) {
         this._valid = true;
-        this._buffer = (this._getter ? this._getter(value) : <any>value);
-        this._updateSubscribers(this._buffer);
+        this._buffer = (this._getter ? this._getter(error ? Err(error) : Ok(value)) : <any>value);
+        if (this._buffer!.ok) {
+            this._updateSubscribers(this._buffer!.value, error);
+        } else {
+            this._updateSubscribers(undefined as any);
+        }
     };
 
     setState(state: StateRead<I> | undefined) {
@@ -39,7 +44,7 @@ export class StateRepeater<O, I> extends StateBase<O | undefined> implements Sta
         }
     }
 
-    subscribe<B extends StateSubscriber<O | undefined>>(func: B, update?: boolean): B {
+    subscribe<B extends StateSubscriber<O>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0 && this._state) {
             this._subscribers.push(func);
             this._state.subscribe(this._subscriber.bind(this));
@@ -48,7 +53,7 @@ export class StateRepeater<O, I> extends StateBase<O | undefined> implements Sta
         return super.subscribe(func, update);
     }
 
-    unsubscribe<B extends StateSubscriber<O | undefined>>(func: B): B {
+    unsubscribe<B extends StateSubscriber<O>>(func: B): B {
         if (this._subscribers.length === 1 && this._state) {
             this._valid = false
             this._state.unsubscribe(this._subscriber);
@@ -56,13 +61,13 @@ export class StateRepeater<O, I> extends StateBase<O | undefined> implements Sta
         return super.unsubscribe(func);
     }
 
-    async then<TResult1 = O>(func: ((value: O | undefined) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
+    async then<TResult1 = O>(func: ((value: Result<O, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
         if (this._valid) {
-            return func(<O>this._buffer);
+            return func(this._buffer!);
         } else if (this._state) {
-            return func((this._getter ? this._getter(await this._state) : <any>await this._state));
+            return func((this._getter ? this._getter(await this._state) : await this._state as any));
         } else {
-            return func(undefined);
+            return func(Err({ reason: 'No state registered', code: 'INV' }));
         }
     }
 }

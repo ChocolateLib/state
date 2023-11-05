@@ -22,7 +22,8 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
                     preview: {
                         port: 666
                     },
-                    root: "./pages"
+                    root: "./pages",
+                    base: "/pages/",
                 }
             } else {
                 return {

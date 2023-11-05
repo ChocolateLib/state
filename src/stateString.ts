@@ -1,6 +1,7 @@
+import { Ok, Result } from "@chocolatelib/result";
 import { StateStringLimits } from "./helpers";
 import { StateBase } from "./stateBase";
-import { StateInfo, StateWrite } from "./types";
+import { StateError, StateInfo, StateWrite } from "./types";
 
 /**Function called when user sets value*/
 export type StateStringSetter = (value: string, set: StateString) => void
@@ -23,8 +24,8 @@ export class StateString extends StateBase<string> implements StateWrite<string>
     private _limit: StateStringLimits | undefined;
 
     //Read
-    async then<TResult1 = string>(func: ((value: string) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        return await func(this._value);
+    async then<TResult1 = string>(func: ((value: Result<string, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
+        return await func(Ok(this._value));
     }
 
     //Write

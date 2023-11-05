@@ -1,4 +1,5 @@
-import { StateRead, StateSubscriber } from "./types";
+import { Result } from "@chocolatelib/result";
+import { StateError, StateRead, StateSubscriber } from "./types";
 
 export abstract class StateBase<R> implements StateRead<R>{
     protected _subscribers: StateSubscriber<R>[] = [];
@@ -6,7 +7,13 @@ export abstract class StateBase<R> implements StateRead<R>{
         this._subscribers.push(func);
         if (update) {
             try {
-                this.then(func);
+                this.then((value) => {
+                    if (value.ok) {
+                        func(value.value);
+                    } else {
+                        func(undefined as any, value.error);
+                    }
+                });
             } catch (error) {
                 console.warn('Failed while calling update function', this, func);
             }
@@ -31,17 +38,17 @@ export abstract class StateBase<R> implements StateRead<R>{
         return this._subscribers.includes(subscriber);
     }
 
-    protected _updateSubscribers(value: R): void {
+    protected _updateSubscribers(value: R, error?: StateError): void {
         for (let i = 0, m = this._subscribers.length; i < m; i++) {
             try {
-                this._subscribers[i](value);
+                this._subscribers[i](value, error);
             } catch (e) {
                 console.warn('Failed while calling subscribers ', e, this, this._subscribers[i]);
             }
         }
     }
 
-    abstract then<TResult1 = R, TResult2 = never>(onfulfilled: ((value: R) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1 | TResult2>
+    abstract then<TResult1 = R>(onfulfilled: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1>
 }
 
 /**Checks if a variable is an instance of a state*/

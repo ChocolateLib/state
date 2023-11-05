@@ -1,9 +1,6 @@
-import { State, StateNumberLimits } from "../src";
+import { State, StateDerived, StateNumberLimits } from "../src";
 
-let yo: StateNumberLimits[] = []
-declare global {
-    interface Window { yo: any; }
-}
-window.yo = yo;
 
-console.log(new State(1));
+let derived = new StateDerived();
+let derived2 = new StateDerived();
+console.log(await derived);

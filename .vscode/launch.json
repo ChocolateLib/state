@@ -11,7 +11,7 @@
             "preLaunchTask": "serve",
             "cleanUp": "wholeBrowser",
             "url": "http://localhost:666",
-            "webRoot": "${workspaceFolder}/pages"
+            "webRoot": "${workspaceRoot}",
         }
     ]
 }

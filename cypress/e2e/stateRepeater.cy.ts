@@ -1,4 +1,5 @@
 /// <reference types="cypress" />
+import { Ok } from "@chocolatelib/result";
 import { StateRepeater, State } from "../../src"
 import { createTestAsync } from "./testAsync";
 
@@ -14,7 +15,7 @@ describe('Setup', function () {
     });
     it('Repeater with read func should change read func', async function () {
         let state = new State(10);
-        let repeater = new StateRepeater(state, val => val * 10);
+        let repeater = new StateRepeater(state, val => Ok(val.unwrap * 10));
         expect(await repeater).equal(100);
     });
 });

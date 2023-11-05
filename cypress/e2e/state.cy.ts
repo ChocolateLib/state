@@ -1,60 +1,61 @@
 /// <reference types="cypress" />
+import { Ok } from "@chocolatelib/result";
 import { State } from "../../src"
 
 describe('Initial state', function () {
     it('Creating a state with no initial value', async function () {
         let state = new State(undefined);
-        expect(await state).equal(undefined);
+        expect((await state).unwrap).equal(undefined);
     });
     it('Creating a state with initial value', async function () {
         let state = new State(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
     });
 });
 
 describe('Setting state value', function () {
     it('From owner context', async function () {
         let state = new State(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.set(4)
-        expect(await state).equal(4);
+        expect((await state).unwrap).equal(4);
     });
     it('From user context with no setter function', async function () {
         let state = new State(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.write(4)
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
     });
     it('From user context with standard setter function', async function () {
         let state = new State(2, true);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.set(4)
-        expect(await state).equal(4);
+        expect((await state).unwrap).equal(4);
     });
     it('From user context with custom function', async function () {
         let state = new State(2, (val, state) => { state.set(val * 2); });
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.write(4)
-        expect(await state).equal(8);
+        expect((await state).unwrap).equal(8);
     });
 });
 
 describe('Getting state value', async function () {
     it('Using await', async function () {
         let state = new State(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
     });
     it('Using then', function (done) {
         let state = new State(2);
         state.then((val) => {
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             done()
         })
     });
     it('Using then with chaining return', function (done) {
         let state = new State(2);
         state.then((val) => {
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             return 8;
         }).then((val) => {
             expect(val).equal(8);
@@ -64,7 +65,7 @@ describe('Getting state value', async function () {
     it('Using then with chaining throw', function (done) {
         let state = new State(2);
         state.then((val) => {
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             throw 8;
         }).then(() => { }, (val) => {
             expect(val).equal(8);
@@ -75,7 +76,7 @@ describe('Getting state value', async function () {
         let state = new State(2);
         state.then(async (val) => {
             await new Promise((a) => { setTimeout(a, 10) });
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             return 8;
         }).then((val) => {
             expect(val).equal(8);
@@ -86,7 +87,7 @@ describe('Getting state value', async function () {
         let state = new State(2);
         state.then(async (val) => {
             await new Promise((a) => { setTimeout(a, 10) });
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             throw 8;
         }).then(() => { }, (val) => {
             expect(val).equal(8);
