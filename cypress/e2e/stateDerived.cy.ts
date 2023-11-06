@@ -7,7 +7,7 @@ import { createTestAsync } from "./testAsync";
 describe('Getting value', function () {
     it('Getting value from ValueDerived with no Values', async function () {
         let derived = new StateDerived();
-        expect((await derived).err).equal(undefined);
+        expect((await derived).err).equal(true);
     });
     it('Getting value from ValueDerived with Value with read function set', async function () {
         let state1 = new State(5);

@@ -19,7 +19,7 @@ export type StateError = {
 
 export interface StateRead<R> {
     /**Allows getting value of state  */
-    then<TResult1 = R>(onfulfilled: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1>
+    then<TResult1 = R>(func: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1>
     /**This adds a function as a subscriber to the state
      * @param update set true to update subscriber*/
     subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B

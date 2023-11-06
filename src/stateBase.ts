@@ -48,7 +48,7 @@ export abstract class StateBase<R> implements StateRead<R>{
         }
     }
 
-    abstract then<TResult1 = R>(onfulfilled: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1>
+    abstract then<TResult1 = R>(func: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1>
 }
 
 /**Checks if a variable is an instance of a state*/

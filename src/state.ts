@@ -8,7 +8,7 @@ export type StateSetter<R, W extends R = R> = (value: W, set: State<R, W>) => vo
 export class State<R, W extends R = R> extends StateBase<R> implements StateWrite<R, W>, StateInfo<R> {
     /**Creates a state which holds a value
      * @param init initial value for state, use undefined to indicate that state does not have a value yet
-     * @param setter function called when state value is set via setter, set true let state set it's own value 
+     * @param setter function called when state value is set via setter, set true let write set it's value 
      * @param checker function to allow state users to check if a given value is valid for the state
      * @param limiter function to allow state users to limit a given value to state limit */
     constructor(init: R, setter?: StateSetter<R, W> | boolean, checker?: StateChecker<W>, limiter?: StateLimiter<W>) {
