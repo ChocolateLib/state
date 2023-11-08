@@ -1,6 +1,6 @@
 export * from "./helpers"
 export * from "./state"
-export * from "./stateAsync"
+// export * from "./stateAsync"
 export * from "./stateBase"
 export * from "./stateDerived"
 export * from "./stateNumber"

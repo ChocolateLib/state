@@ -1,52 +1,108 @@
-import { Result } from "@chocolatelib/result";
+import { Err, Ok, Result } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateError, StateInfo, StateSubscriber, StateWrite } from "./types";
+import { StateChecker, StateError, StateInfo, StateLimiter, StateSubscriber, StateWrite } from "./types";
 
+/**State Resource
+ * state for representing a remote resource
+ * 
+ * 
+ * 
+ * 
+ * Debounce and Timout  
+ * example if the debounce is set to 50 and timeout to 200
+ * singleGet will not be called until 50 ms after the first await of the state
+ * when singleGet returns a Result, it is returned to all awaiters then buffered for the period of the timeout
+ * any awaiters within the timeout will get the buffer, after that it starts over
+ * 
+ * Debounce and Retention
+ * When a subscriber is added the debounce delay is added before setupConnection is called
+ * likevise when the last subscriber unsubscribes the retention delay is added before teardownConnection is called
+ * this can prevent unneeded calls if the user is switching around quickly between things referencing states */
 export abstract class StateResource<R, W extends R = R> extends StateBase<R> implements StateWrite<R, W>, StateInfo<R> {
     /**Stores the last time when buffer was valid*/
-    private _valid: number = 0;
+    #valid: number = 0;
+    /**Is high while once fetching value*/
+    #fetching: boolean = false;
     /**Buffer of last value*/
-    private _buffer: Result<R, StateError> | undefined;
+    #buffer: Result<R, StateError> | undefined;
+    /**Promises for value*/
+    #promises: ((value: Result<R, StateError>) => void)[] = [];
+    /**Timeout for retention delay*/
+    #retentionTimout: number = 0;
+    /**Timeout for debounce delay*/
+    #debounceTimout: number = 0;
+
+    /**Debounce delaying one time value retrival*/
+    get debounce(): number {
+        return 50;
+    }
 
     /**Timeout for validity of last buffered value*/
     get timeout(): number {
         return 50;
     }
 
-    /**Debounce delaying one time value retrival */
-    get debounce(): number {
+    /**Retention delay before resource performs teardown of connection is performed*/
+    get retention(): number {
         return 50;
     }
 
-    private async _singleGet(): Promise<Result<R, StateError>> {
-        if (this.debounce > 0)
-            await new Promise((a) => { setTimeout(a, this.debounce) });
-        let value = await this.singleGet(this);
-        if (value.ok)
-            this._valid = Date.now() + this.timeout;
-        return value;
-    }
-
-    /**Called if the state is awaited, call singleGetReturn with the result*/
+    /**Called if the state is awaited, returns the value once*/
     protected abstract singleGet(self: this): Promise<Result<R, StateError>>
 
+    async then<TResult1 = R>(func: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
+        if (this.#valid >= Date.now())
+            return func(this.#buffer!);
+        else if (this.#fetching)
+            return func(await new Promise((a) => {
+                this.#promises.push(a)
+            }));
+        else {
+            this.#fetching = true;
+            if (this.debounce > 0)
+                await new Promise((a) => { setTimeout(a, this.debounce) });
+            this.#buffer = await this.singleGet(this);
+            this.#valid = Date.now() + this.timeout;
+            for (let i = 0; i < this.#promises.length; i++)
+                this.#promises[i](this.#buffer);
+            this.#promises = [];
+            this.#fetching = false;
+            return func(this.#buffer);
+        }
+    }
 
     /**Called when state is subscribed to to setup connection to remote resource*/
-    protected setupConnection(self: this) {
-
-    }
+    protected abstract setupConnection(self: this): void
 
     /**Called when state is no longer subscribed to to cleanup connection to remote resource*/
-    protected teardownConnection(self: this) {
+    protected abstract teardownConnection(self: this): void
 
+    protected _updateResource(value: R, error?: StateError | undefined) {
+        this.#buffer = error ? Err(error) : Ok(value);
+        this.#valid = Date.now() + this.timeout;
+        for (let i = 0; i < this.#promises.length; i++)
+            this.#promises[i](this.#buffer);
+        this.#promises = [];
+        this.#fetching = false;
+        this._updateSubscribers(value, error)
     }
-
 
     subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0) {
-            this._isLive = true;
             this._subscribers.push(func);
-            this.setupConnection(this)
+            if (this.#retentionTimout) {
+                clearTimeout(this.#retentionTimout);
+                this.#retentionTimout = 0;
+            } else {
+                this.#fetching = true;
+                if (this.debounce > 0)
+                    this.#debounceTimout = setTimeout(() => {
+                        this.setupConnection(this)
+                        this.#debounceTimout = 0;
+                    }, this.debounce);
+                else
+                    this.setupConnection(this)
+            }
             return func;
         }
         return super.subscribe(func, update);
@@ -54,36 +110,105 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
 
     unsubscribe<B extends StateSubscriber<R>>(func: B): B {
         if (this._subscribers.length === 1) {
-            this._isLive = false;
-            this._valid = false;
-            this.teardownConnection(this);
+            if (this.#debounceTimout) {
+                clearTimeout(this.#debounceTimout);
+                this.#debounceTimout = 0;
+            } else {
+                if (this.retention > 0) {
+                    this.#retentionTimout = setTimeout(() => {
+                        this.teardownConnection(this);
+                        this.#retentionTimout = 0;
+                    }, this.retention);
+                } else {
+                    this.teardownConnection(this);
+                }
+            }
         }
         return super.unsubscribe(func);
     }
 
-    async then<TResult1 = R>(func: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        if (this._valid >= Date.now()) {
-            return func(this._buffer!);
-        } else {
-            return func(await this._singleGet())
-        }
+    abstract write(value: W): void
+
+    abstract check(value: W): string | undefined
+
+    abstract limit(value: W): W
+}
+
+/**Alternative state resource which can be initialized with functions */
+export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
+
+    /**Creates a state which connects to an async source and keeps updated with any changes to the source
+     * @param init initial value for state, use undefined to indicate that state does not have a value yet
+     * @param once function called when state value is requested once, the function should throw if it fails to get data
+     * @param setup function called when state is being used to setup live update of value
+     * @param teardown function called when state is no longer being used to teardown/cleanup communication
+     * @param setter function called when state value is set via setter, set true let state set it's own value 
+     * @param checker function to allow state users to check if a given value is valid for the state
+     * @param limiter function to allow state users to limit a given value to state limit */
+    constructor(
+        once: (state: StateResourceFunc<R, W>) => Promise<Result<R, StateError>>,
+        setup: (state: StateResourceFunc<R, W>) => void,
+        teardown: (state: StateResourceFunc<R, W>) => void,
+        debounce: number,
+        timeout: number,
+        retention: number,
+        setter?: (value: W, state: StateResourceFunc<R, W>) => void,
+        checker?: StateChecker<W>,
+        limiter?: StateLimiter<W>
+    ) {
+        super();
+        this.singleGet = once;
+        this.setupConnection = setup;
+        this.teardownConnection = teardown;
+        this.#debounce = debounce;
+        this.#timeout = timeout;
+        this.#retention = retention;
+        if (setter)
+            this.#setter = setter;
+        if (checker)
+            this.check = checker;
+        if (limiter)
+            this.limit = limiter;
     }
 
+    #setter: ((value: W, state: StateResourceFunc<R, W>) => void) | undefined;
+    #debounce: number;
+    #timeout: number;
+    #retention: number;
 
+    /**Debounce delaying one time value retrival*/
+    get debounce(): number {
+        return this.#debounce;
+    }
 
+    /**Timeout for validity of last buffered value*/
+    get timeout(): number {
+        return this.#timeout;
+    }
+
+    /**Retention delay before resource performs teardown of connection is performed*/
+    get retention(): number {
+        return this.#retention;
+    }
+
+    /**Called if the state is awaited, returns the value once*/
+    protected async singleGet(_self: this): Promise<Result<R, StateError>> { return Err({ reason: "", code: "" }); }
+
+    /**Called when state is subscribed to to setup connection to remote resource*/
+    protected setupConnection(_self: this): void { }
+
+    /**Called when state is no longer subscribed to to cleanup connection to remote resource*/
+    protected teardownConnection(_self: this): void { }
 
     write(value: W): void {
-        if (this._setter && this._buffer !== value)
-            this._setter(value, this);
+        if (this.#setter)
+            this.#setter(value, this);
     }
 
-
-
-    check(value: W): string | undefined {
-        return (this._check ? this._check(value) : undefined)
+    check(_value: W): string | undefined {
+        return undefined
     }
-
     limit(value: W): W {
-        return (this._limit ? this._limit(value) : value);
+        return value;
     }
 }

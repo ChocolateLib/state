@@ -1,14 +1,14 @@
 import { StateWriteable, StateAsync, StateInfo, StateOptions } from "../src";
 
 export class StateServer {
-    private _value: number;
+    #value: number;
     connnected: boolean = true;
     constructor(value: number) {
         this._value = value;
         setInterval(() => { this._value++ }, 100)
     }
 
-    private _clients: [] = [];
+    #clients: [] = [];
 
     async getValue() {
         if (this.connnected) {
@@ -29,8 +29,8 @@ export class StateServer {
 }
 
 export class StateClient extends StateAsync<number> {
-    private _server: StateServer;
-    private _interval: NodeJS.Timeout;
+    #server: StateServer;
+    #interval: NodeJS.Timeout;
 
     constructor(server: StateServer, options?: StateOptions) {
         super(

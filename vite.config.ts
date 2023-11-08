@@ -71,6 +71,7 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
                         rollupOptions: {
                             external: Object.keys(dependencies),
                         },
+                        target: "es2022",
                     },
                     plugins: [
                         dts({ rollupTypes: true, }),

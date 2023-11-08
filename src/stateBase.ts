@@ -34,6 +34,7 @@ export abstract class StateBase<R> implements StateRead<R>{
     inUse(): boolean {
         return Boolean(this._subscribers.length);
     }
+
     hasSubscriber(subscriber: StateSubscriber<R>): boolean {
         return this._subscribers.includes(subscriber);
     }

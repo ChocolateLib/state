@@ -13,41 +13,41 @@ export class StateNumber extends StateBase<number> implements StateWrite<number>
     constructor(init: number, setter?: StateNumberSetter | boolean, limiter?: StateNumberLimits) {
         super();
         if (setter)
-            this._setter = (setter === true ? this.set : setter);
+            this.#setter = (setter === true ? this.set : setter);
         if (limiter)
-            this._limit = limiter;
-        this._value = init;
+            this.#limit = limiter;
+        this.#value = init;
     }
 
-    private _value: number;
-    private _setter: StateNumberSetter | undefined;
-    private _limit: StateNumberLimits | undefined;
+    #value: number;
+    #setter: StateNumberSetter | undefined;
+    #limit: StateNumberLimits | undefined;
 
     //Read
     async then<TResult1 = number>(func: ((value: Result<number, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        return await func(Ok(this._value));
+        return await func(Ok(this.#value));
     }
 
     //Write
     write(value: number): void {
-        if (this._setter)
-            if (this._value !== value) {
-                value = (this._limit ? this._limit.limit(value) : value);
-                if (this._value !== value)
-                    this._setter(value, this);
+        if (this.#setter)
+            if (this.#value !== value) {
+                value = (this.#limit ? this.#limit.limit(value) : value);
+                if (this.#value !== value)
+                    this.#setter(value, this);
             }
     }
     check(value: number): string | undefined {
-        return (this._limit ? this._limit.check(value) : undefined)
+        return (this.#limit ? this.#limit.check(value) : undefined)
     }
 
     limit(value: number): number {
-        return (this._limit ? this._limit.limit(value) : value);
+        return (this.#limit ? this.#limit.limit(value) : value);
     }
 
     //Owner
     set(value: number) {
-        this._value = value;
+        this.#value = value;
         this._updateSubscribers(value);
     }
 }

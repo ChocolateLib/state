@@ -13,56 +13,56 @@ export class StateDerived<O, I> extends StateBase<O> implements StateInfo<O> {
         if (getter)
             this._getter = getter;
         if (states)
-            this._states = [...states];
+            this.#states = [...states];
     }
 
-    private _valid: boolean = false;
-    private _buffer: Result<O, StateError> | undefined;
+    #valid: boolean = false;
+    #buffer: Result<O, StateError> | undefined;
 
-    private _states: StateRead<I>[] = [];
-    private _stateBuffers: Result<I, StateError>[] = [];
-    private _stateSubscribers: StateSubscriber<I>[] = [];
+    #states: StateRead<I>[] = [];
+    #stateBuffers: Result<I, StateError>[] = [];
+    #stateSubscribers: StateSubscriber<I>[] = [];
 
-    private _calculatingValue: boolean = false;
+    #calculatingValue: boolean = false;
 
     protected _getter(values: Result<I, StateError>[]): Result<O, StateError> {
         return values[0] as any;
     };
 
-    private async _calculate() {
+    async #calculate() {
         await undefined;
-        this._valid = true;
-        this._buffer = this._getter(this._stateBuffers);
-        if (this._buffer.ok)
-            this._updateSubscribers(this._buffer.value);
+        this.#valid = true;
+        this.#buffer = this._getter(this.#stateBuffers);
+        if (this.#buffer.ok)
+            this._updateSubscribers(this.#buffer.value);
         else
-            this._updateSubscribers(undefined as any, this._buffer.error);
-        this._calculatingValue = false;
+            this._updateSubscribers(undefined as any, this.#buffer.error);
+        this.#calculatingValue = false;
     }
 
-    private _connect() {
-        for (let i = 0; i < this._states.length; i++) {
-            this._stateSubscribers[i] = this._states[i].subscribe((value, error) => {
-                this._stateBuffers[i] = error ? Err(error) : Ok(value);
-                if (!this._calculatingValue) {
-                    this._calculatingValue = true;
-                    this._calculate();
+    #connect() {
+        for (let i = 0; i < this.#states.length; i++) {
+            this.#stateSubscribers[i] = this.#states[i].subscribe((value, error) => {
+                this.#stateBuffers[i] = error ? Err(error) : Ok(value);
+                if (!this.#calculatingValue) {
+                    this.#calculatingValue = true;
+                    this.#calculate();
                 }
             }, true);
         }
     }
 
-    private _disconnect() {
-        for (let i = 0; i < this._states.length; i++)
-            this._states[i].unsubscribe(this._stateSubscribers[i]);
-        this._stateSubscribers = [];
+    #disconnect() {
+        for (let i = 0; i < this.#states.length; i++)
+            this.#states[i].unsubscribe(this.#stateSubscribers[i]);
+        this.#stateSubscribers = [];
     }
 
     //Read
     subscribe<B extends StateSubscriber<O>>(func: B, update?: boolean): B {
         if (this._subscribers.length === 0) {
             this._subscribers.push(func);
-            this._connect();
+            this.#connect();
             return func;
         }
         return super.subscribe(func, update);
@@ -70,26 +70,26 @@ export class StateDerived<O, I> extends StateBase<O> implements StateInfo<O> {
 
     unsubscribe<B extends StateSubscriber<O>>(func: B): B {
         if (this._subscribers.length === 1)
-            this._disconnect();
+            this.#disconnect();
         return super.unsubscribe(func);
     }
 
     async then<TResult1 = O>(func: ((value: Result<O, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
-        if (this._valid)
-            return func(this._buffer!);
-        else if (this._states.length)
-            return func(this._getter(await Promise.all(this._states)));
+        if (this.#valid)
+            return func(this.#buffer!);
+        else if (this.#states.length)
+            return func(this._getter(await Promise.all(this.#states)));
         else
             return func(Err({ reason: 'No states registered', code: 'INV' }));
     }
     //Owner
     setStates(...states: StateRead<I>[]) {
         if (this._subscribers.length) {
-            this._disconnect();
-            this._states = [...states];
-            this._connect();
+            this.#disconnect();
+            this.#states = [...states];
+            this.#connect();
         } else
-            this._states = [...states];
+            this.#states = [...states];
     }
 }
 
