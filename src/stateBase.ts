@@ -39,10 +39,10 @@ export abstract class StateBase<R> implements StateRead<R>{
         return this._subscribers.includes(subscriber);
     }
 
-    protected _updateSubscribers(value: R, error?: StateError): void {
+    protected _updateSubscribers(value?: R, error?: StateError): void {
         for (let i = 0, m = this._subscribers.length; i < m; i++) {
             try {
-                this._subscribers[i](value, error);
+                this._subscribers[i](value!, error);
             } catch (e) {
                 console.warn('Failed while calling subscribers ', e, this, this._subscribers[i]);
             }

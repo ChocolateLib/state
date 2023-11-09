@@ -33,19 +33,13 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
     #debounceTimout: number = 0;
 
     /**Debounce delaying one time value retrival*/
-    get debounce(): number {
-        return 50;
-    }
+    abstract get debounce(): number
 
     /**Timeout for validity of last buffered value*/
-    get timeout(): number {
-        return 50;
-    }
+    abstract get timeout(): number
 
     /**Retention delay before resource performs teardown of connection is performed*/
-    get retention(): number {
-        return 50;
-    }
+    abstract get retention(): number
 
     /**Called if the state is awaited, returns the value once*/
     protected abstract singleGet(self: this): Promise<Result<R, StateError>>
@@ -77,8 +71,8 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
     /**Called when state is no longer subscribed to to cleanup connection to remote resource*/
     protected abstract teardownConnection(self: this): void
 
-    protected _updateResource(value: R, error?: StateError | undefined) {
-        this.#buffer = error ? Err(error) : Ok(value);
+    protected updateResource(value?: R, error?: StateError | undefined) {
+        this.#buffer = error ? Err(error) : Ok(value!);
         this.#valid = Date.now() + this.timeout;
         for (let i = 0; i < this.#promises.length; i++)
             this.#promises[i](this.#buffer);
@@ -129,9 +123,13 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
 
     abstract write(value: W): void
 
-    abstract check(value: W): string | undefined
+    check(value: W): string | undefined {
+        return undefined;
+    }
 
-    abstract limit(value: W): W
+    limit(value: W): W {
+        return value;
+    }
 }
 
 /**Alternative state resource which can be initialized with functions */
@@ -212,3 +210,5 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
         return value;
     }
 }
+
+
