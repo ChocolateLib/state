@@ -2,6 +2,10 @@ import { Err, Ok, Result } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
 import { StateChecker, StateError, StateInfo, StateLimiter, StateSubscriber, StateWrite } from "./types";
 
+interface UpdateResource<R> {
+    updateResource(value?: R, error?: StateError | undefined): void
+}
+
 /**State Resource
  * state for representing a remote resource
  * 
@@ -42,7 +46,7 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
     abstract get retention(): number
 
     /**Called if the state is awaited, returns the value once*/
-    protected abstract singleGet(self: this): Promise<Result<R, StateError>>
+    protected abstract singleGet(): Promise<Result<R, StateError>>
 
     async then<TResult1 = R>(func: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
         if (this.#valid >= Date.now())
@@ -55,7 +59,7 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
             this.#fetching = true;
             if (this.debounce > 0)
                 await new Promise((a) => { setTimeout(a, this.debounce) });
-            this.#buffer = await this.singleGet(this);
+            this.#buffer = await this.singleGet();
             this.#valid = Date.now() + this.timeout;
             for (let i = 0; i < this.#promises.length; i++)
                 this.#promises[i](this.#buffer);
@@ -66,12 +70,12 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
     }
 
     /**Called when state is subscribed to to setup connection to remote resource*/
-    protected abstract setupConnection(self: this): void
+    protected abstract setupConnection(update: UpdateResource<R>): void
 
     /**Called when state is no longer subscribed to to cleanup connection to remote resource*/
-    protected abstract teardownConnection(self: this): void
+    protected abstract teardownConnection(): void
 
-    protected updateResource(value?: R, error?: StateError | undefined) {
+    protected updateResource(value?: R, error?: StateError) {
         this.#buffer = error ? Err(error) : Ok(value!);
         this.#valid = Date.now() + this.timeout;
         for (let i = 0; i < this.#promises.length; i++)
@@ -91,11 +95,11 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
                 this.#fetching = true;
                 if (this.debounce > 0)
                     this.#debounceTimout = setTimeout(() => {
-                        this.setupConnection(this)
+                        this.setupConnection(this as any)
                         this.#debounceTimout = 0;
                     }, this.debounce);
                 else
-                    this.setupConnection(this)
+                    this.setupConnection(this as any)
             }
             return func;
         }
@@ -110,11 +114,11 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
             } else {
                 if (this.retention > 0) {
                     this.#retentionTimout = setTimeout(() => {
-                        this.teardownConnection(this);
+                        this.teardownConnection();
                         this.#retentionTimout = 0;
                     }, this.retention);
                 } else {
-                    this.teardownConnection(this);
+                    this.teardownConnection();
                 }
             }
         }
@@ -123,7 +127,7 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
 
     abstract write(value: W): void
 
-    check(value: W): string | undefined {
+    check(_value: W): string | undefined {
         return undefined;
     }
 
@@ -134,9 +138,7 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
 
 /**Alternative state resource which can be initialized with functions */
 export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
-
     /**Creates a state which connects to an async source and keeps updated with any changes to the source
-     * @param init initial value for state, use undefined to indicate that state does not have a value yet
      * @param once function called when state value is requested once, the function should throw if it fails to get data
      * @param setup function called when state is being used to setup live update of value
      * @param teardown function called when state is no longer being used to teardown/cleanup communication
@@ -144,9 +146,9 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
      * @param checker function to allow state users to check if a given value is valid for the state
      * @param limiter function to allow state users to limit a given value to state limit */
     constructor(
-        once: (state: StateResourceFunc<R, W>) => Promise<Result<R, StateError>>,
-        setup: (state: StateResourceFunc<R, W>) => void,
-        teardown: (state: StateResourceFunc<R, W>) => void,
+        once: () => Promise<Result<R, StateError>>,
+        setup: (update: UpdateResource<R>) => void,
+        teardown: () => void,
         debounce: number,
         timeout: number,
         retention: number,
@@ -190,13 +192,13 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
     }
 
     /**Called if the state is awaited, returns the value once*/
-    protected async singleGet(_self: this): Promise<Result<R, StateError>> { return Err({ reason: "", code: "" }); }
+    protected async singleGet(): Promise<Result<R, StateError>> { return Err({ reason: "", code: "" }); }
 
     /**Called when state is subscribed to to setup connection to remote resource*/
-    protected setupConnection(_self: this): void { }
+    protected setupConnection(_update: UpdateResource<R>): void { }
 
     /**Called when state is no longer subscribed to to cleanup connection to remote resource*/
-    protected teardownConnection(_self: this): void { }
+    protected teardownConnection(): void { }
 
     write(value: W): void {
         if (this.#setter)
@@ -210,5 +212,3 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
         return value;
     }
 }
-
-

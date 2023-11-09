@@ -6,17 +6,10 @@ export abstract class StateBase<R> implements StateRead<R>{
     subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
         this._subscribers.push(func);
         if (update) {
-            try {
-                this.then((value) => {
-                    if (value.ok) {
-                        func(value.value);
-                    } else {
-                        func(undefined as any, value.error);
-                    }
-                });
-            } catch (error) {
-                console.warn('Failed while calling update function', this, func);
-            }
+            this.then((value) => {
+                //@ts-expect-error
+                func(value.value, value.error);
+            });
         }
         return func;
     }
