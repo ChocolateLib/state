@@ -1,5 +1,5 @@
 import { Err, Ok, Result } from "@chocolatelib/result";
-import { State, StateDerived, StateError, StateNumberLimits, StateResource, StateResourceFunc } from "../src";
+import { State, StateDerived, StateError, StateNumberLimits, StateResource, StateResourceFunc, UpdateResource } from "../src";
 
 
 class testServer {
@@ -52,12 +52,12 @@ class test extends StateResource<number> {
         }
     }
 
-    protected setupConnection(updateResource): void {
+    protected setupConnection(update: UpdateResource<number>): void {
         this.#interval = setInterval(async () => {
             try {
-                updateResource(await this.#server.fetch());
+                update.updateResource(await this.#server.fetch());
             } catch (e) {
-                updateResource(undefined, { code: "CL", reason: e });
+                update.updateResource(undefined, { code: "CL", reason: e });
             }
         }, 500);
     }

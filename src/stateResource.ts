@@ -2,7 +2,7 @@ import { Err, Ok, Result } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
 import { StateChecker, StateError, StateInfo, StateLimiter, StateSubscriber, StateWrite } from "./types";
 
-interface UpdateResource<R> {
+export interface UpdateResource<R> {
     updateResource(value?: R, error?: StateError | undefined): void
 }
 

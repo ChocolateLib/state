@@ -1,6 +1,6 @@
 {
   "name": "@chocolatelib/state",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -41,6 +41,6 @@
   },
   "homepage": "https://github.com/ChocolateLib/state#readme",
   "dependencies": {
-    "@chocolatelib/result": "^0.0.3"
+    "@chocolatelib/result": "^0.0.4"
   }
 }
