@@ -1,16 +1,9 @@
-import { Err, Ok, Result } from "@chocolatelib/result";
+import { Err } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateChecker, StateError, StateInfo, StateLimiter, StateSubscriber, StateWrite } from "./types";
-
-export interface UpdateResource<R> {
-    updateResource(value?: R, error?: StateError | undefined): void
-}
+import { StateChecker, StateLimiter, StateResult, StateSubscriber, StateWrite } from "./types";
 
 /**State Resource
  * state for representing a remote resource
- * 
- * 
- * 
  * 
  * Debounce and Timout  
  * example if the debounce is set to 50 and timeout to 200
@@ -22,15 +15,15 @@ export interface UpdateResource<R> {
  * When a subscriber is added the debounce delay is added before setupConnection is called
  * likevise when the last subscriber unsubscribes the retention delay is added before teardownConnection is called
  * this can prevent unneeded calls if the user is switching around quickly between things referencing states */
-export abstract class StateResource<R, W extends R = R> extends StateBase<R> implements StateWrite<R, W>, StateInfo<R> {
+export abstract class StateResource<R, W extends R = R> extends StateBase<R> implements StateWrite<R, W> {
     /**Stores the last time when buffer was valid*/
     #valid: number = 0;
     /**Is high while once fetching value*/
     #fetching: boolean = false;
     /**Buffer of last value*/
-    #buffer: Result<R, StateError> | undefined;
+    #buffer: StateResult<R> | undefined;
     /**Promises for value*/
-    #promises: ((value: Result<R, StateError>) => void)[] = [];
+    #promises: ((value: StateResult<R>) => void)[] = [];
     /**Timeout for retention delay*/
     #retentionTimout: number = 0;
     /**Timeout for debounce delay*/
@@ -46,9 +39,9 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
     abstract get retention(): number
 
     /**Called if the state is awaited, returns the value once*/
-    protected abstract singleGet(): Promise<Result<R, StateError>>
+    protected abstract singleGet(): Promise<StateResult<R>>
 
-    async then<TResult1 = R>(func: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
+    async then<TResult1 = R>(func: ((value: StateResult<R>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
         if (this.#valid >= Date.now())
             return func(this.#buffer!);
         else if (this.#fetching)
@@ -70,24 +63,24 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
     }
 
     /**Called when state is subscribed to to setup connection to remote resource*/
-    protected abstract setupConnection(update: UpdateResource<R>): void
+    protected abstract setupConnection(update: (value: StateResult<R>) => void): void
 
     /**Called when state is no longer subscribed to to cleanup connection to remote resource*/
     protected abstract teardownConnection(): void
 
-    protected updateResource(value?: R, error?: StateError) {
-        this.#buffer = error ? Err(error) : Ok(value!);
+    protected updateResource(value: StateResult<R>) {
+        this.#buffer = value;
         this.#valid = Date.now() + this.timeout;
         for (let i = 0; i < this.#promises.length; i++)
             this.#promises[i](this.#buffer);
         this.#promises = [];
         this.#fetching = false;
-        this._updateSubscribers(value, error)
+        this.updateSubscribers(value)
     }
 
     subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
-        if (this._subscribers.length === 0) {
-            this._subscribers.push(func);
+        if (this.subscribers.length === 0) {
+            this.subscribers.push(func);
             if (this.#retentionTimout) {
                 clearTimeout(this.#retentionTimout);
                 this.#retentionTimout = 0;
@@ -95,11 +88,11 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
                 this.#fetching = true;
                 if (this.debounce > 0)
                     this.#debounceTimout = setTimeout(() => {
-                        this.setupConnection(this as any)
+                        this.setupConnection(this.updateSubscribers.bind(this))
                         this.#debounceTimout = 0;
                     }, this.debounce);
                 else
-                    this.setupConnection(this as any)
+                    this.setupConnection(this.updateSubscribers.bind(this))
             }
             return func;
         }
@@ -107,7 +100,7 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
     }
 
     unsubscribe<B extends StateSubscriber<R>>(func: B): B {
-        if (this._subscribers.length === 1) {
+        if (this.subscribers.length === 1) {
             if (this.#debounceTimout) {
                 clearTimeout(this.#debounceTimout);
                 this.#debounceTimout = 0;
@@ -146,8 +139,8 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
      * @param checker function to allow state users to check if a given value is valid for the state
      * @param limiter function to allow state users to limit a given value to state limit */
     constructor(
-        once: () => Promise<Result<R, StateError>>,
-        setup: (update: UpdateResource<R>) => void,
+        once: () => Promise<StateResult<R>>,
+        setup: (update: (value: StateResult<R>) => void) => void,
         teardown: () => void,
         debounce: number,
         timeout: number,
@@ -192,10 +185,10 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
     }
 
     /**Called if the state is awaited, returns the value once*/
-    protected async singleGet(): Promise<Result<R, StateError>> { return Err({ reason: "", code: "" }); }
+    protected async singleGet(): Promise<StateResult<R>> { return Err({ reason: "", code: "" }); }
 
     /**Called when state is subscribed to to setup connection to remote resource*/
-    protected setupConnection(_update: UpdateResource<R>): void { }
+    protected setupConnection(_update: (value: StateResult<R>) => void): void { }
 
     /**Called when state is no longer subscribed to to cleanup connection to remote resource*/
     protected teardownConnection(): void { }

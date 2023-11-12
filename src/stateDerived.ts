@@ -1,52 +1,57 @@
-import { StateSubscriber, StateRead, StateInfo, StateError } from "./types";
+import { StateSubscriber, StateRead, StateResult } from "./types";
 import { StateBase } from "./stateBase";
-import { Err, Ok, Result } from "@chocolatelib/result";
+import { Err, Ok } from "@chocolatelib/result";
 
-type Getter<O, I> = (value: Result<I, StateError>[]) => Result<O, StateError>
-
-export class StateDerived<O, I> extends StateBase<O> implements StateInfo<O> {
+export class StateDerived<O, I> extends StateBase<O> {
     /**Creates a state derives a value from other states
      * @param init initial value for state, use undefined to indicate that state does not have a value yet
      * @param getter function used to calculate the derived value of the states*/
-    constructor(getter?: Getter<O, I>, ...states: StateRead<I>[]) {
+    constructor(getter?: (value: StateResult<I>[]) => StateResult<O>, ...states: StateRead<I>[]) {
         super();
         if (getter)
-            this._getter = getter;
+            this.getter = getter;
         if (states)
             this.#states = [...states];
     }
 
     #valid: boolean = false;
-    #buffer: Result<O, StateError> | undefined;
+    #buffer: StateResult<O> | undefined;
 
     #states: StateRead<I>[] = [];
-    #stateBuffers: Result<I, StateError>[] = [];
+    #stateBuffers: StateResult<I>[] = [];
     #stateSubscribers: StateSubscriber<I>[] = [];
+    #calculatingValue: number = 0;
 
-    #calculatingValue: boolean = false;
-
-    protected _getter(values: Result<I, StateError>[]): Result<O, StateError> {
+    protected getter(values: StateResult<I>[]): StateResult<O> {
         return values[0] as any;
     };
 
     async #calculate() {
         await undefined;
         this.#valid = true;
-        this.#buffer = this._getter(this.#stateBuffers);
-        if (this.#buffer.ok)
-            this._updateSubscribers(this.#buffer.value);
-        else
-            this._updateSubscribers(undefined as any, this.#buffer.error);
-        this.#calculatingValue = false;
+        this.#buffer = this.getter(this.#stateBuffers);
+        this.updateSubscribers(this.#buffer);
+        this.#calculatingValue = 1;
     }
 
     #connect() {
+        this.#calculatingValue = 0;
+        let count = this.#states.length;
         for (let i = 0; i < this.#states.length; i++) {
-            this.#stateSubscribers[i] = this.#states[i].subscribe((value, error) => {
-                this.#stateBuffers[i] = error ? Err(error) : Ok(value);
-                if (!this.#calculatingValue) {
-                    this.#calculatingValue = true;
+            this.#stateSubscribers[i] = this.#states[i].subscribe((value) => {
+                if (this.#calculatingValue === 1) {
+                    this.#stateBuffers[i] = value;
+                    this.#calculatingValue = 2;
                     this.#calculate();
+                } else if (this.#calculatingValue === 0 && !this.#stateBuffers[i]) {
+                    this.#stateBuffers[i] = value;
+                    count--;
+                    if (count === 0) {
+                        this.#calculatingValue = 2;
+                        this.#calculate();
+                    }
+                } else {
+                    this.#stateBuffers[i] = value;
                 }
             }, true);
         }
@@ -56,12 +61,13 @@ export class StateDerived<O, I> extends StateBase<O> implements StateInfo<O> {
         for (let i = 0; i < this.#states.length; i++)
             this.#states[i].unsubscribe(this.#stateSubscribers[i]);
         this.#stateSubscribers = [];
+        this.#stateBuffers = [];
     }
 
     //Read
     subscribe<B extends StateSubscriber<O>>(func: B, update?: boolean): B {
-        if (this._subscribers.length === 0) {
-            this._subscribers.push(func);
+        if (this.subscribers.length === 0) {
+            this.subscribers.push(func);
             this.#connect();
             return func;
         }
@@ -69,22 +75,22 @@ export class StateDerived<O, I> extends StateBase<O> implements StateInfo<O> {
     }
 
     unsubscribe<B extends StateSubscriber<O>>(func: B): B {
-        if (this._subscribers.length === 1)
+        if (this.subscribers.length === 1)
             this.#disconnect();
         return super.unsubscribe(func);
     }
 
-    async then<TResult1 = O>(func: ((value: Result<O, StateError>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
+    async then<TResult1 = O>(func: ((value: StateResult<O>) => TResult1 | PromiseLike<TResult1>)): Promise<TResult1> {
         if (this.#valid)
             return func(this.#buffer!);
         else if (this.#states.length)
-            return func(this._getter(await Promise.all(this.#states)));
+            return func(this.getter(await Promise.all(this.#states)));
         else
             return func(Err({ reason: 'No states registered', code: 'INV' }));
     }
     //Owner
     setStates(...states: StateRead<I>[]) {
-        if (this._subscribers.length) {
+        if (this.subscribers.length) {
             this.#disconnect();
             this.#states = [...states];
             this.#connect();
@@ -98,14 +104,15 @@ export class StateAverage extends StateDerived<number, number> {
     constructor(...states: StateRead<number>[]) {
         super(undefined, ...states);
     }
-    protected _getter(values: Result<number, StateError>[]) {
+    protected getter(values: StateResult<number>[]) {
         let sum = 0;
-        for (let i = 0; i < values.length; i++)
-            if (values[i].ok)
-                //@ts-expect-error
-                sum += values[i].value;
+        for (let i = 0; i < values.length; i++) {
+            let value = values[i];
+            if (value.ok)
+                sum += value.value;
             else
-                return values[i];
+                return value;
+        }
         return Ok(sum / values.length);
     };
 }
@@ -115,14 +122,15 @@ export class StateSummer extends StateDerived<number, number> {
     constructor(...states: StateRead<number>[]) {
         super(undefined, ...states);
     }
-    protected _getter(values: Result<number, StateError>[]) {
+    protected getter(values: StateResult<number>[]) {
         let sum = 0;
-        for (let i = 0; i < values.length; i++)
-            if (values[i].ok)
-                //@ts-expect-error
-                sum += values[i].value;
+        for (let i = 0; i < values.length; i++) {
+            let value = values[i];
+            if (value.ok)
+                sum += value.value;
             else
-                return values[i];
+                return value;
+        }
         return Ok(sum);
     };
 }

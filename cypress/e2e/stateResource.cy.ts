@@ -113,7 +113,7 @@ describe('Async subscribe', function () {
             async () => { throw new Error('This should not be called'); }
             , (update) => {
                 calls[0](0);
-                update.updateResource(2);
+                update(Ok(2));
             }
             , () => { throw new Error('This should not be called'); }
             , 50, 50, 50);
@@ -127,7 +127,7 @@ describe('Async subscribe', function () {
             async () => { throw new Error('This should not be called'); }
             , (update) => {
                 calls[0](0);
-                update.updateResource(2);
+                update(Ok(2));
             }
             , () => { calls[2](0); }
             , 50, 50, 50);

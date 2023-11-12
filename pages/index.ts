@@ -1,8 +1,11 @@
 import { Err, Ok, Result } from "@chocolatelib/result";
-import { State, StateDerived, StateError, StateNumberLimits, StateResource, StateResourceFunc, UpdateResource } from "../src";
+import { State, StateError, StateResource, StateResult, StateSummer } from "../src";
 
 
-class testServer {
+let state = new State(Ok(1), true);
+state.write(5);
+
+class StateResourceTestServer {
     value: number = 0;
     quality: number = 1;
     constructor() {
@@ -23,11 +26,11 @@ class testServer {
     }
 }
 
-class test extends StateResource<number> {
-    #server: testServer;
+class StateResourceTestClient extends StateResource<number> {
+    #server: StateResourceTestServer;
     #interval: ReturnType<typeof setInterval>;
 
-    constructor(server: testServer) {
+    constructor(server: StateResourceTestServer) {
         super();
         this.#server = server;
     }
@@ -52,12 +55,12 @@ class test extends StateResource<number> {
         }
     }
 
-    protected setupConnection(update: UpdateResource<number>): void {
+    protected setupConnection(update: (value: StateResult<number>) => void): void {
         this.#interval = setInterval(async () => {
             try {
-                update.updateResource(await this.#server.fetch());
+                update(Ok(await this.#server.fetch()));
             } catch (e) {
-                update.updateResource(undefined, { code: "CL", reason: e });
+                update(Err({ code: "CL", reason: e }));
             }
         }, 500);
     }
@@ -71,10 +74,10 @@ class test extends StateResource<number> {
     }
 }
 
-let server = new testServer();
+let server = new StateResourceTestServer();
 (window as any).server = server;
 
-let client = new test(server);
+let client = new StateResourceTestClient(server);
 (window as any).client = client;
 
 let slider = document.createElement("input");
@@ -102,13 +105,13 @@ document.body.appendChild(singleGet);
 
 let connect = document.createElement("button");
 connect.innerHTML = "Connect";
-let sub: (val: any, err: any) => void;
+let sub: (val: Result<number, StateError>) => void;
 connect.onclick = () => {
-    sub = client.subscribe((val, err) => {
-        if (err) {
-            connect.innerHTML = "Connect " + String(err.reason);
+    sub = client.subscribe((val) => {
+        if (val.err) {
+            connect.innerHTML = "Connect " + String(val.error.reason);
         } else {
-            connect.innerHTML = "Connect " + String(val);
+            connect.innerHTML = "Connect " + String(val.value);
         }
     })
 }
@@ -120,3 +123,38 @@ disconnect.onclick = () => {
     client.unsubscribe(sub);
 }
 document.body.appendChild(disconnect);
+
+
+let derived1 = new State(Ok(1))
+let derived2 = new State(Ok(2))
+let derived3 = new State(Ok(3))
+let derived = new StateSummer(...[derived1, derived2, derived3])
+
+let derived1Input = document.createElement("input");
+derived1Input.type = "number";
+derived1.subscribe((val) => {
+    derived1Input.valueAsNumber = val.unwrap;
+}, true);
+derived1Input.onchange = () => { derived1.set(Ok(derived1Input.valueAsNumber)) }
+document.body.appendChild(derived1Input);
+
+let derivedConnect = document.createElement("button");
+derivedConnect.innerHTML = "Derived Connect";
+let derivedSub: (val: Result<number, StateError>) => void;
+derivedConnect.onclick = () => {
+    derivedSub = derived.subscribe((val) => {
+        if (val.err) {
+            derivedConnect.innerHTML = "Derived Connect " + String(val.error.reason);
+        } else {
+            derivedConnect.innerHTML = "Derived Connect " + String(val.value);
+        }
+    })
+}
+document.body.appendChild(derivedConnect);
+
+let derivedDisconnect = document.createElement("button");
+derivedDisconnect.innerHTML = "Derived Disconnect";
+derivedDisconnect.onclick = () => {
+    derived.unsubscribe(derivedSub);
+}
+document.body.appendChild(derivedDisconnect);

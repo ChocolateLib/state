@@ -1,48 +1,54 @@
-import { Result } from "@chocolatelib/result";
-import { StateError, StateRead, StateSubscriber } from "./types";
+import { None, Option } from "@chocolatelib/result";
+import { StateRead, StateRelated, StateResult, StateSubscriber } from "./types";
 
-export abstract class StateBase<R> implements StateRead<R>{
-    protected _subscribers: StateSubscriber<R>[] = [];
+export abstract class StateBase<R, L extends {} = any> implements StateRead<R, L>{
+    protected subscribers: StateSubscriber<R>[] = [];
+
+    abstract then<TResult1 = R>(func: ((value: StateResult<R>) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1>
+
     subscribe<B extends StateSubscriber<R>>(func: B, update?: boolean): B {
-        this._subscribers.push(func);
+        if (this.subscribers.includes(func)) {
+            console.warn('Function already registered as subscriber');
+            return func
+        }
+        this.subscribers.push(func);
         if (update) {
-            this.then((value) => {
-                //@ts-expect-error
-                func(value.value, value.error);
-            });
+            this.then((value) => { func(value); });
         }
         return func;
     }
 
     unsubscribe<B extends StateSubscriber<R>>(func: B): B {
-        const index = this._subscribers.indexOf(func);
+        const index = this.subscribers.indexOf(func);
         if (index != -1) {
-            this._subscribers.splice(index, 1);
+            this.subscribers.splice(index, 1);
         } else {
             console.warn('Subscriber not found with state', this, func);
         }
         return func;
     }
 
+    related(): Option<StateRelated<L>> {
+        return None();
+    }
+
     inUse(): boolean {
-        return Boolean(this._subscribers.length);
+        return Boolean(this.subscribers.length);
     }
 
     hasSubscriber(subscriber: StateSubscriber<R>): boolean {
-        return this._subscribers.includes(subscriber);
+        return this.subscribers.includes(subscriber);
     }
 
-    protected _updateSubscribers(value?: R, error?: StateError): void {
-        for (let i = 0, m = this._subscribers.length; i < m; i++) {
+    protected updateSubscribers(value: StateResult<R>): void {
+        for (let i = 0, m = this.subscribers.length; i < m; i++) {
             try {
-                this._subscribers[i](value!, error);
+                this.subscribers[i](value);
             } catch (e) {
-                console.warn('Failed while calling subscribers ', e, this, this._subscribers[i]);
+                console.warn('Failed while calling subscribers ', e, this, this.subscribers[i]);
             }
         }
     }
-
-    abstract then<TResult1 = R>(func: ((value: Result<R, StateError>) => TResult1 | PromiseLike<TResult1>)): PromiseLike<TResult1>
 }
 
 /**Checks if a variable is an instance of a state*/
