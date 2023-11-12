@@ -22,7 +22,8 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
                     preview: {
                         port: 666
                     },
-                    root: "./pages"
+                    root: "./pages",
+                    base: "/pages/",
                 }
             } else {
                 return {
@@ -70,6 +71,7 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
                         rollupOptions: {
                             external: Object.keys(dependencies),
                         },
+                        target: "es2022",
                     },
                     plugins: [
                         dts({ rollupTypes: true, }),

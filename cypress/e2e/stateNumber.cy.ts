@@ -4,53 +4,53 @@ import { StateNumber, StateNumberLimits } from "../../src"
 describe('Initial state', function () {
     it('Creating a state with initial value', async function () {
         let state = new StateNumber(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
     });
 });
 
 describe('Setting state value', function () {
     it('From owner context', async function () {
         let state = new StateNumber(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.set(4)
-        expect(await state).equal(4);
+        expect((await state).unwrap).equal(4);
     });
     it('From user context with standard setter function', async function () {
         let state = new StateNumber(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.set(4)
-        expect(await state).equal(4);
+        expect((await state).unwrap).equal(4);
     });
     it('From user context with standard setter function', async function () {
         let state = new StateNumber(2, true);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.set(4)
-        expect(await state).equal(4);
+        expect((await state).unwrap).equal(4);
     });
     it('From user context with custom function', async function () {
         let state = new StateNumber(2, (val, state) => { state.set(val * 2); });
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.write(4)
-        expect(await state).equal(8);
+        expect((await state).unwrap).equal(8);
     });
 });
 
 describe('Getting state value', async function () {
     it('Using await', async function () {
         let state = new StateNumber(2);
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
     });
     it('Using then', function (done) {
         let state = new StateNumber(2);
         state.then((val) => {
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             done()
         })
     });
     it('Using then with chaining return', function (done) {
         let state = new StateNumber(2);
         state.then((val) => {
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             return 8;
         }).then((val) => {
             expect(val).equal(8);
@@ -60,7 +60,7 @@ describe('Getting state value', async function () {
     it('Using then with chaining throw', function (done) {
         let state = new StateNumber(2);
         state.then((val) => {
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             throw 8;
         }).then(() => { }, (val) => {
             expect(val).equal(8);
@@ -71,7 +71,7 @@ describe('Getting state value', async function () {
         let state = new StateNumber(2);
         state.then(async (val) => {
             await new Promise((a) => { setTimeout(a, 10) });
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             return 8;
         }).then((val) => {
             expect(val).equal(8);
@@ -82,7 +82,7 @@ describe('Getting state value', async function () {
         let state = new StateNumber(2);
         state.then(async (val) => {
             await new Promise((a) => { setTimeout(a, 10) });
-            expect(val).equal(2);
+            expect(val.unwrap).equal(2);
             throw 8;
         }).then(() => { }, (val) => {
             expect(val).equal(8);
@@ -154,30 +154,30 @@ describe('Value subscriber', function () {
 describe('Number limits', function () {
     it('Min max', async function () {
         let state = new StateNumber(2, true, new StateNumberLimits(5, 54));
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.write(1)
-        expect(await state).equal(5);
+        expect((await state).unwrap).equal(5);
         state.write(99)
-        expect(await state).equal(54);
+        expect((await state).unwrap).equal(54);
     });
     it('Step sizes', async function () {
         let state = new StateNumber(2, true, new StateNumberLimits(undefined, undefined, 0.22));
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.write(4)
-        expect(await state).equal(3.96);
+        expect((await state).unwrap).equal(3.96);
     });
     it('Step sizes and offset', async function () {
         let state = new StateNumber(2, true, new StateNumberLimits(undefined, undefined, 0.22, 0.12));
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.write(4)
-        expect(await state).equal(4.08);
+        expect((await state).unwrap).equal(4.08);
     });
     it('Step sizes and offset and min max', async function () {
         let state = new StateNumber(2, true, new StateNumberLimits(8, 77, 0.22, 0.12));
-        expect(await state).equal(2);
+        expect((await state).unwrap).equal(2);
         state.write(4)
-        expect(await state).equal(8);
+        expect((await state).unwrap).equal(8);
         state.write(90)
-        expect(await state).equal(77);
+        expect((await state).unwrap).equal(77);
     });
 });

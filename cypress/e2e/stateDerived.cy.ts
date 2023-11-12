@@ -1,18 +1,19 @@
 /// <reference types="cypress" />
-import { StateDerived, State, StateAverage as StateAverager, StateSummer } from "../../src"
+import { Ok } from "@chocolatelib/result";
+import { StateDerived, State, StateAverage, StateSummer } from "../../src"
 import { createTestAsync } from "./testAsync";
 
 
 describe('Getting value', function () {
     it('Getting value from ValueDerived with no Values', async function () {
-        let derived = new StateDerived(() => { });
-        expect(await derived).equal(undefined);
+        let derived = new StateDerived();
+        expect((await derived).err).equal(true);
     });
     it('Getting value from ValueDerived with Value with read function set', async function () {
         let state1 = new State(5);
         let state2 = new State(6);
-        let derived = new StateDerived(([a, b]) => { return a * b }, ...[state1, state2],);
-        expect(await derived).equal(30);
+        let derived = new StateDerived(([a, b]) => { return Ok(a.unwrap * b.unwrap) }, ...[state1, state2],);
+        expect((await derived).unwrap).equal(30);
     });
 });
 
@@ -58,9 +59,9 @@ describe('Error Angles', function () {
         let state4 = new State(4);
         let values = [state1, state2, state3];
         let derived = new StateDerived((values) => { return values[0] }, ...values);
-        expect(await derived).equal(1);
+        expect((await derived).unwrap).equal(1);
         values.unshift(state4);
-        expect(await derived).equal(1);
+        expect((await derived).unwrap).equal(1);
     });
 });
 
@@ -70,10 +71,10 @@ describe('Average', function () {
         let state2 = new State(2);
         let state3 = new State(3);
         let state4 = new State(4);
-        let derived = new StateAverager(state1, state2, state3);
-        expect(await derived).equal(2);
+        let derived = new StateAverage(state1, state2, state3);
+        expect((await derived).unwrap).equal(2);
         derived.setStates(state1, state2, state3, state4)
-        expect(await derived).equal(2.5);
+        expect((await derived).unwrap).equal(2.5);
     });
 });
 
@@ -84,9 +85,9 @@ describe('Sum', function () {
         let state3 = new State(3);
         let state4 = new State(4);
         let derived = new StateSummer(state1, state2, state3);
-        expect(await derived).equal(6);
+        expect((await derived).unwrap).equal(6);
         derived.setStates(state1, state2, state3, state4)
-        expect(await derived).equal(10);
+        expect((await derived).unwrap).equal(10);
     });
 });
 
@@ -98,8 +99,8 @@ describe('Error Angles', function () {
         let state4 = new State(4);
         let values = [state1, state2, state3];
         let derived = new StateDerived((values) => { return values[0] }, ...values);
-        expect(await derived).equal(1);
+        expect((await derived).unwrap).equal(1);
         values.unshift(state4);
-        expect(await derived).equal(1);
+        expect((await derived).unwrap).equal(1);
     });
 });
