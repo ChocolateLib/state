@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 import { Err, Ok, Result, Some } from "@chocolatelib/result";
-import { State, StateError } from "../../src"
+import { State, StateError, StateResult } from "../../src"
 
 describe('Initial state', function () {
     it('Creating a state with initial error', async function () {
@@ -9,6 +9,14 @@ describe('Initial state', function () {
     });
     it('Creating a state with initial value', async function () {
         let state = new State(Ok(2));
+        expect((await state).unwrap).equal(2);
+    });
+    it('Creating a state with initial promise', async function () {
+        let state = new State(new Promise<StateResult<number>>((a) => { setTimeout(a, 1000, 2) }));
+        expect((await state).unwrap).equal(2);
+    });
+    it('Creating a state with promise function', async function () {
+        let state = new State(() => { return new Promise<StateResult<number>>((a) => { setTimeout(a, 1000, 2) }) });
         expect((await state).unwrap).equal(2);
     });
 });

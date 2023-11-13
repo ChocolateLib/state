@@ -17,11 +17,13 @@ export type StateError = {
 /**Struct returned when a state errors*/
 export type StateSetter<R, W = R> = ((value: W) => Option<StateResult<R>>)
 
-/**Function used to check if a value is within state limits*/
-export type StateChecker<W> = (value: W) => string | undefined
-
-/**Function used to limit value to withint state limits*/
-export type StateLimiter<W> = (value: W) => W
+/**Function used to limit value to within state limits*/
+export type StateLimiter<W> = {
+    /**Limits given value to valid range if possible returns None if not possible */
+    limit: (value: W) => Option<W>,
+    /**Checks if the value is valid and returns reason for invalidity */
+    check: (value: W) => string | undefined
+}
 
 /**Map of states related to a state */
 export type StateRelated<R> = { [Property in keyof R]: StateRead<R[keyof R], any> | undefined }
@@ -41,11 +43,7 @@ export interface StateRead<R, L extends {} = any> {
     related(): Option<StateRelated<L>>
 }
 
-export interface StateWrite<R, W = R, L extends {} = any> extends StateRead<R, L> {
+export interface StateWrite<R, W = R, L extends {} = any> extends StateRead<R, L>, StateLimiter<W> {
     /** This sets the value of the state and updates all subscribers */
     write(value: W): void
-    /**Used to check if a value is valid for the state, returns the reason why it is not valid */
-    check(value: W): string | undefined
-    /**Returns the given value modified to be within the states limits, or just the given value */
-    limit(value: W): W
 }

@@ -1,4 +1,14 @@
-export class StateNumberLimits {
+import { Option, Some } from "@chocolatelib/result";
+import { StateLimiter } from "./types";
+
+export interface StateNumberRelated {
+    min?: number
+    max?: number
+    decimals?: number
+    unit?: number
+}
+
+export class StateNumberLimits implements StateLimiter<number> {
     readonly min: number | undefined;
     readonly max: number | undefined;
     readonly step: number | undefined;
@@ -34,17 +44,17 @@ export class StateNumberLimits {
         return undefined
     }
 
-    limit(value: number): number {
+    limit(value: number): Option<number> {
         if (this.step)
             if (this.start)
                 value = parseFloat((Math.round((value - this.start + Number.EPSILON) / this.step) * this.step + this.start).toFixed(this.decimals))
             else
                 value = parseFloat((Math.round((value + Number.EPSILON) / this.step) * this.step).toFixed(this.decimals))
-        return Math.min(this.max ?? Infinity, Math.max(this.min ?? -Infinity, value));
+        return Some(Math.min(this.max ?? Infinity, Math.max(this.min ?? -Infinity, value)));
     }
 }
 
-export class StateStringLimits {
+export class StateStringLimits implements StateLimiter<string> {
     readonly maxLength: number | undefined;
     readonly maxByteLength: number | undefined;
     /**String limiter struct
@@ -65,7 +75,7 @@ export class StateStringLimits {
         return undefined
     }
 
-    limit(value: string): string {
+    limit(value: string): Option<string> {
         if (this.maxLength && value.length > this.maxLength)
             value = value.slice(0, this.maxLength);
         if (this.maxByteLength) {
@@ -73,7 +83,7 @@ export class StateStringLimits {
             if (value.at(-1)?.charCodeAt(0) === 65533)
                 value = value.slice(0, -1);
         }
-        return value
+        return Some(value);
     }
 }
 

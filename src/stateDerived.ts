@@ -1,12 +1,13 @@
 import { StateSubscriber, StateRead, StateResult } from "./types";
 import { StateBase } from "./stateBase";
 import { Err, Ok } from "@chocolatelib/result";
+import { State } from "./state";
 
-export class StateDerived<O, I> extends StateBase<O> {
+export class StateDerived<I, O = I, T extends StateRead<I>[] = []> extends StateBase<O> {
     /**Creates a state derives a value from other states
      * @param init initial value for state, use undefined to indicate that state does not have a value yet
      * @param getter function used to calculate the derived value of the states*/
-    constructor(getter?: (value: StateResult<I>[]) => StateResult<O>, ...states: StateRead<I>[]) {
+    constructor(getter?: (value: StateResult<I>[]) => StateResult<O>, ...states: T) {
         super();
         if (getter)
             this.getter = getter;
@@ -50,9 +51,8 @@ export class StateDerived<O, I> extends StateBase<O> {
                         this.#calculatingValue = 2;
                         this.#calculate();
                     }
-                } else {
+                } else
                     this.#stateBuffers[i] = value;
-                }
             }, true);
         }
     }
@@ -88,8 +88,9 @@ export class StateDerived<O, I> extends StateBase<O> {
         else
             return func(Err({ reason: 'No states registered', code: 'INV' }));
     }
+
     //Owner
-    setStates(...states: StateRead<I>[]) {
+    setStates(...states: T) {
         if (this.subscribers.length) {
             this.#disconnect();
             this.#states = [...states];
@@ -99,7 +100,7 @@ export class StateDerived<O, I> extends StateBase<O> {
     }
 }
 
-export class StateAverage extends StateDerived<number, number> {
+export class StateAverage extends StateDerived<number, number, StateRead<number>[]> {
     /**Creates a state which keeps the avererage of the value of other states*/
     constructor(...states: StateRead<number>[]) {
         super(undefined, ...states);
@@ -117,7 +118,7 @@ export class StateAverage extends StateDerived<number, number> {
     };
 }
 
-export class StateSummer extends StateDerived<number, number> {
+export class StateSummer extends StateDerived<number, number, StateRead<number>[]> {
     /**Creates a state which keeps the sum of the value of other states*/
     constructor(...states: StateRead<number>[]) {
         super(undefined, ...states);

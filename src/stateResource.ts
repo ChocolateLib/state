@@ -1,6 +1,6 @@
-import { Err } from "@chocolatelib/result";
+import { Err, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateChecker, StateLimiter, StateResult, StateSubscriber, StateWrite } from "./types";
+import { StateLimiter, StateResult, StateSubscriber, StateWrite } from "./types";
 
 /**State Resource
  * state for representing a remote resource
@@ -124,8 +124,8 @@ export abstract class StateResource<R, W extends R = R> extends StateBase<R> imp
         return undefined;
     }
 
-    limit(value: W): W {
-        return value;
+    limit(value: W): Option<W> {
+        return Some(value);
     }
 }
 
@@ -146,7 +146,6 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
         timeout: number,
         retention: number,
         setter?: (value: W, state: StateResourceFunc<R, W>) => void,
-        checker?: StateChecker<W>,
         limiter?: StateLimiter<W>
     ) {
         super();
@@ -158,16 +157,15 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
         this.#retention = retention;
         if (setter)
             this.#setter = setter;
-        if (checker)
-            this.check = checker;
         if (limiter)
-            this.limit = limiter;
+            this.#limit = limiter;
     }
 
     #setter: ((value: W, state: StateResourceFunc<R, W>) => void) | undefined;
     #debounce: number;
     #timeout: number;
     #retention: number;
+    #limit: StateLimiter<W> | undefined;
 
     /**Debounce delaying one time value retrival*/
     get debounce(): number {
@@ -198,10 +196,11 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
             this.#setter(value, this);
     }
 
-    check(_value: W): string | undefined {
-        return undefined
+    check(value: W): string | undefined {
+        return (this.#limit ? this.#limit.check(value) : undefined)
     }
-    limit(value: W): W {
-        return value;
+
+    limit(value: W): Option<W> {
+        return (this.#limit ? this.#limit.limit(value) : Some(value));
     }
 }
