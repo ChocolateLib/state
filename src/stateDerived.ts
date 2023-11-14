@@ -1,24 +1,23 @@
 import { StateSubscriber, StateRead, StateResult } from "./types";
 import { StateBase } from "./stateBase";
 import { Err, Ok } from "@chocolatelib/result";
-import { State } from "./state";
 
-export class StateDerived<I, O = I, T extends StateRead<I>[] = []> extends StateBase<O> {
+export class StateDerived<I, O = I, T extends [StateRead<I>, ...StateRead<I>[]] = [StateRead<I>, ...StateRead<I>[]]> extends StateBase<O> {
     /**Creates a state derives a value from other states
      * @param init initial value for state, use undefined to indicate that state does not have a value yet
      * @param getter function used to calculate the derived value of the states*/
-    constructor(getter?: (value: StateResult<I>[]) => StateResult<O>, ...states: T) {
+    constructor(...states: T)
+    constructor(getter?: (value: T) => StateResult<O>, ...states: T) {
         super();
         if (getter)
             this.getter = getter;
-        if (states)
-            this.#states = [...states];
+        this.#states = states;
     }
 
     #valid: boolean = false;
     #buffer: StateResult<O> | undefined;
 
-    #states: StateRead<I>[] = [];
+    #states: T;
     #stateBuffers: StateResult<I>[] = [];
     #stateSubscribers: StateSubscriber<I>[] = [];
     #calculatingValue: number = 0;
@@ -37,27 +36,35 @@ export class StateDerived<I, O = I, T extends StateRead<I>[] = []> extends State
 
     #connect() {
         this.#calculatingValue = 0;
-        let count = this.#states.length;
-        for (let i = 0; i < this.#states.length; i++) {
-            this.#stateSubscribers[i] = this.#states[i].subscribe((value) => {
-                if (this.#calculatingValue === 1) {
-                    this.#stateBuffers[i] = value;
-                    this.#calculatingValue = 2;
-                    this.#calculate();
-                } else if (this.#calculatingValue === 0 && !this.#stateBuffers[i]) {
-                    this.#stateBuffers[i] = value;
-                    count--;
-                    if (count === 0) {
+        if (this.#states.length > 1) {
+            let count = this.#states.length;
+            for (let i = 0; i < this.#states.length; i++) {
+                this.#stateSubscribers[i] = this.#states[i].subscribe((value) => {
+                    if (this.#calculatingValue === 1) {
+                        this.#stateBuffers[i] = value;
                         this.#calculatingValue = 2;
                         this.#calculate();
-                    }
-                } else
-                    this.#stateBuffers[i] = value;
-            }, true);
-        }
+                    } else if (this.#calculatingValue === 0 && !this.#stateBuffers[i]) {
+                        this.#stateBuffers[i] = value;
+                        count--;
+                        if (count === 0) {
+                            this.#calculatingValue = 2;
+                            this.#calculate();
+                        }
+                    } else
+                        this.#stateBuffers[i] = value;
+                }, true);
+            }
+        } else
+            this.#stateSubscribers[0] = this.#states[0].subscribe((value) => {
+                this.#valid = true;
+                this.#buffer = this.getter([value]);
+                this.updateSubscribers(this.#buffer);
+            });
     }
 
     #disconnect() {
+        this.#valid = false;
         for (let i = 0; i < this.#states.length; i++)
             this.#states[i].unsubscribe(this.#stateSubscribers[i]);
         this.#stateSubscribers = [];
@@ -100,10 +107,10 @@ export class StateDerived<I, O = I, T extends StateRead<I>[] = []> extends State
     }
 }
 
-export class StateAverage extends StateDerived<number, number, StateRead<number>[]> {
+export class StateAverage extends StateDerived<number, number, [StateRead<number>, ...StateRead<number>[]]> {
     /**Creates a state which keeps the avererage of the value of other states*/
-    constructor(...states: StateRead<number>[]) {
-        super(undefined, ...states);
+    constructor(...states: [StateRead<number>, ...StateRead<number>[]]) {
+        super(...states);
     }
     protected getter(values: StateResult<number>[]) {
         let sum = 0;
@@ -118,10 +125,10 @@ export class StateAverage extends StateDerived<number, number, StateRead<number>
     };
 }
 
-export class StateSummer extends StateDerived<number, number, StateRead<number>[]> {
+export class StateSummer extends StateDerived<number, number, [StateRead<number>, ...StateRead<number>[]]> {
     /**Creates a state which keeps the sum of the value of other states*/
-    constructor(...states: StateRead<number>[]) {
-        super(undefined, ...states);
+    constructor(...states: [StateRead<number>, ...StateRead<number>[]]) {
+        super(...states);
     }
     protected getter(values: StateResult<number>[]) {
         let sum = 0;

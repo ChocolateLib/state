@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 import { Err, Ok, Result, Some } from "@chocolatelib/result";
-import { State, StateError, StateResult } from "../../src"
+import { State, StateError, StateNumberLimits, StateResult, StateStringLimits } from "../../src"
 
 describe('Initial state', function () {
     it('Creating a state with initial error', async function () {
@@ -12,11 +12,23 @@ describe('Initial state', function () {
         expect((await state).unwrap).equal(2);
     });
     it('Creating a state with initial promise', async function () {
-        let state = new State(new Promise<StateResult<number>>((a) => { setTimeout(a, 1000, 2) }));
+        let time = performance.now();
+        let state = new State(new Promise<StateResult<number>>((a) => { setTimeout(a, 250, Ok(2)) }));
+        await new Promise((a) => { setTimeout(a, 250) });
+        expect((await state).unwrap).equal(2);
+        expect(performance.now()).above(time + 150);
+        expect(performance.now()).below(time + 350);
+        await new Promise((a) => { setTimeout(a, 250) });
         expect((await state).unwrap).equal(2);
     });
     it('Creating a state with promise function', async function () {
-        let state = new State(() => { return new Promise<StateResult<number>>((a) => { setTimeout(a, 1000, 2) }) });
+        let time = performance.now();
+        let state = new State(() => { return new Promise<StateResult<number>>((a) => { setTimeout(a, 250, Ok(2)) }) });
+        await new Promise((a) => { setTimeout(a, 250) });
+        expect((await state).unwrap).equal(2);
+        expect(performance.now()).above(time + 350);
+        expect(performance.now()).below(time + 600);
+        await new Promise((a) => { setTimeout(a, 250) });
         expect((await state).unwrap).equal(2);
     });
 });
@@ -161,5 +173,55 @@ describe('Value subscriber', function () {
         let state = new State(Ok(2));
         state.subscribe((val) => { throw false }, false);
         state.set(Ok(10));
+    });
+});
+
+describe('Number limits', function () {
+    it('Min max', async function () {
+        let state = new State(Ok(2), true, new StateNumberLimits(5, 54));
+        expect((await state).unwrap).equal(2);
+        state.write(1)
+        expect((await state).unwrap).equal(5);
+        state.write(99)
+        expect((await state).unwrap).equal(54);
+    });
+    it('Step sizes', async function () {
+        let state = new State(Ok(2), true, new StateNumberLimits(undefined, undefined, 0.22));
+        expect((await state).unwrap).equal(2);
+        state.write(4)
+        expect((await state).unwrap).equal(3.96);
+    });
+    it('Step sizes and offset', async function () {
+        let state = new State(Ok(2), true, new StateNumberLimits(undefined, undefined, 0.22, 0.12));
+        expect((await state).unwrap).equal(2);
+        state.write(4)
+        expect((await state).unwrap).equal(4.08);
+    });
+    it('Step sizes and offset and min max', async function () {
+        let state = new State(Ok(2), true, new StateNumberLimits(8, 77, 0.22, 0.12));
+        expect((await state).unwrap).equal(2);
+        state.write(4)
+        expect((await state).unwrap).equal(8);
+        state.write(90)
+        expect((await state).unwrap).equal(77);
+    });
+});
+
+describe('String limits', function () {
+    it('Max length', async function () {
+        let state = new State(Ok('2'), true, new StateStringLimits(5));
+        expect((await state).unwrap).equal('2');
+        state.write('1')
+        expect((await state).unwrap).equal('1');
+        state.write('999999')
+        expect((await state).unwrap).equal('99999');
+    });
+    it('Max bytes', async function () {
+        let state = new State(Ok('2'), true, new StateStringLimits(99, 40));
+        expect((await state).unwrap).equal('2');
+        state.write('1')
+        expect((await state).unwrap).equal('1');
+        state.write('æøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæ')
+        expect((await state).unwrap).equal('æøæøæøæøæøæøæøæøæøæø');
     });
 });

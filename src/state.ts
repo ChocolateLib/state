@@ -23,14 +23,20 @@ export class State<R, W = R, L extends {} = any> extends StateBase<R, L> impleme
             this.#related = related;
         if (init instanceof Promise) {
             this.then = init.then.bind(init);
-            //@ts-expect-error
-            init.then(() => { delete this.then });
+            init.then((value) => {
+                this.#value = value;
+                //@ts-expect-error
+                delete this.then
+            });
         } else if (typeof init === 'function') {
             this.then = async (func) => {
                 let promise = init();
                 this.then = promise.then;
-                //@ts-expect-error
-                promise.then(() => { delete this.then });
+                promise.then((value) => {
+                    this.#value = value;
+                    //@ts-expect-error
+                    delete this.then
+                });
                 return promise.then(func);
             };
         } else {

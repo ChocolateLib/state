@@ -1,5 +1,6 @@
 import { Err, Ok, Result } from "@chocolatelib/result";
-import { State, StateError, StateResource, StateResult, StateSummer } from "../src";
+import { State, StateDerived, StateError, StateResource, StateResult, StateSummer } from "../src";
+
 
 
 let state = new State(Ok(1), true);
@@ -128,6 +129,7 @@ document.body.appendChild(disconnect);
 let derived1 = new State(Ok(1))
 let derived2 = new State(Ok(2))
 let derived3 = new State(Ok(3))
+let derivede = new StateDerived((value) => { }, ...[derived1, derived2, derived3])
 let derived = new StateSummer(...[derived1, derived2, derived3])
 
 let derived1Input = document.createElement("input");
