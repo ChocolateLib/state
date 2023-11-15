@@ -1,6 +1,14 @@
 import { StateSubscriber, StateRead, StateResult } from "./types";
 import { StateBase } from "./stateBase";
 import { Err, Ok } from "@chocolatelib/result";
+import { State } from "./state";
+
+function asdf<I, T extends [StateRead<I>, ...StateRead<I>[]] = [StateRead<I>, ...StateRead<I>[]]>(...states: T) {
+
+}
+
+asdf(new State(Ok(0)))
+
 
 export class StateDerived<I, O = I, T extends [StateRead<I>, ...StateRead<I>[]] = [StateRead<I>, ...StateRead<I>[]]> extends StateBase<O> {
     /**Creates a state derives a value from other states
