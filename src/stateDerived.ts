@@ -1,31 +1,27 @@
 import { StateSubscriber, StateRead, StateResult } from "./types";
 import { StateBase } from "./stateBase";
 import { Err, Ok } from "@chocolatelib/result";
-import { State } from "./state";
 
-function asdf<I, T extends [StateRead<I>, ...StateRead<I>[]] = [StateRead<I>, ...StateRead<I>[]]>(...states: T) {
+type StateDerivedGetter<I, O = I> = (value: StateResult<I>[]) => StateResult<O>;
 
-}
-
-asdf(new State(Ok(0)))
-
-
-export class StateDerived<I, O = I, T extends [StateRead<I>, ...StateRead<I>[]] = [StateRead<I>, ...StateRead<I>[]]> extends StateBase<O> {
-    /**Creates a state derives a value from other states
-     * @param init initial value for state, use undefined to indicate that state does not have a value yet
-     * @param getter function used to calculate the derived value of the states*/
-    constructor(...states: T)
-    constructor(getter?: (value: T) => StateResult<O>, ...states: T) {
+/**The `StateDerived` class is used to create a state which is derived from other states. The derived state will update when any of the other states update.*/
+export class StateDerived<I, O = I> extends StateBase<O> {
+    /**Creates a state which is derived from other states. The derived state will update when any of the other states update.
+     * @param state - The first state to be used in the derived state. If this is a function, it will be used as the getter function.
+     * @param states - The other states to be used in the derived state.*/
+    constructor(state?: StateRead<I> | StateDerivedGetter<I, O>, ...states: StateRead<I>[]) {
         super();
-        if (getter)
-            this.getter = getter;
-        this.#states = states;
+        if (typeof state === 'function') {
+            this.getter = state;
+            this.#states = states;
+        } else
+            this.#states = arguments as any;
     }
 
     #valid: boolean = false;
     #buffer: StateResult<O> | undefined;
 
-    #states: T;
+    #states: StateRead<I>[];
     #stateBuffers: StateResult<I>[] = [];
     #stateSubscribers: StateSubscriber<I>[] = [];
     #calculatingValue: number = 0;
@@ -105,7 +101,10 @@ export class StateDerived<I, O = I, T extends [StateRead<I>, ...StateRead<I>[]] 
     }
 
     //Owner
-    setStates(...states: T) {
+
+    /**The `setStates` method is used to update the states used by the `StateDerived` class.
+     * @param states - The new states. This function should accept an array of states and return the derived state.*/
+    setStates(...states: StateRead<I>[]) {
         if (this.subscribers.length) {
             this.#disconnect();
             this.#states = [...states];
@@ -113,13 +112,24 @@ export class StateDerived<I, O = I, T extends [StateRead<I>, ...StateRead<I>[]] 
         } else
             this.#states = [...states];
     }
+
+    /**The `setGetter` method is used to update the getter function used by the `StateDerived` class.
+     * This function is used to compute the derived state based on the current states.
+     * @param getter - The new getter function. This function should accept an array of states and return the derived state.*/
+    setGetter(getter: StateDerivedGetter<I, O>,) {
+        if (this.subscribers.length) {
+            this.#disconnect();
+            this.getter = getter;
+            this.#connect();
+        } else
+            this.getter = getter;
+    }
 }
 
-export class StateAverage extends StateDerived<number, number, [StateRead<number>, ...StateRead<number>[]]> {
-    /**Creates a state which keeps the avererage of the value of other states*/
-    constructor(...states: [StateRead<number>, ...StateRead<number>[]]) {
-        super(...states);
-    }
+/** The `StateAverage` class is a specialized type of `StateDerived` that represents the average of multiple `State` instances.
+ * It takes multiple `State` instances as input and automatically updates its value whenever any of the input states change.
+ * The value of a `StateAverage` instance is the average of the values of the input states.*/
+export class StateAverage extends StateDerived<number, number> {
     protected getter(values: StateResult<number>[]) {
         let sum = 0;
         for (let i = 0; i < values.length; i++) {
@@ -133,13 +143,29 @@ export class StateAverage extends StateDerived<number, number, [StateRead<number
     };
 }
 
-export class StateSummer extends StateDerived<number, number, [StateRead<number>, ...StateRead<number>[]]> {
-    /**Creates a state which keeps the sum of the value of other states*/
-    constructor(...states: [StateRead<number>, ...StateRead<number>[]]) {
-        super(...states);
-    }
+/** The `StateSummer` class is a specialized type of `StateDerived` that represents the sum of multiple `State` instances.
+ * It takes multiple `State` instances as input and automatically updates its value whenever any of the input states change.
+ * The value of a `StateSummer` instance is the sum of the values of the input states.*/
+export class StateSummer extends StateDerived<number, number> {
     protected getter(values: StateResult<number>[]) {
         let sum = 0;
+        for (let i = 0; i < values.length; i++) {
+            let value = values[i];
+            if (value.ok)
+                sum += value.value;
+            else
+                return value;
+        }
+        return Ok(sum);
+    };
+}
+
+/** The `StateConcat` class is a specialized type of `StateDerived` that represents the concatenation of multiple `State` instances.
+ * It takes multiple `State` instances as input and automatically updates its value whenever any of the input states change.
+ * The value of a `StateConcat` instance is the concatenation of the values of the input states.*/
+export class StateConcat extends StateDerived<string | number | boolean, string> {
+    protected getter(values: StateResult<string | number | boolean>[]) {
+        let sum = '';
         for (let i = 0; i < values.length; i++) {
             let value = values[i];
             if (value.ok)
