@@ -1,4 +1,4 @@
-import { None, Option, Some } from "@chocolatelib/result";
+import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
 import {
   StateLimiter,
@@ -23,12 +23,21 @@ export class State<R, W = R, L extends {} = any>
       | StateResult<R>
       | Promise<StateResult<R>>
       | (() => Promise<StateResult<R>>),
-    setter?: StateSetter<R, W>,
+    setter?: StateSetter<R, W> | true,
     limiter?: StateLimiter<W>,
     related?: StateRelater<L>
   ) {
     super();
-    if (setter) this.write = setter;
+    if (setter)
+      this.#setter =
+        setter === true
+          ? (value) =>
+              this.#limit
+                ? this.#limit
+                    .limit(value as any)
+                    .map<StateResult<R>>((val) => Ok(val as any))
+                : Some(Ok(value as any))
+          : setter;
     if (limiter) this.#limit = limiter;
     if (related) this.#related = related;
     if (init instanceof Promise) {

@@ -1,6 +1,14 @@
 import { Err, None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateError, StateRelated, StateResult, StateWrite } from "./types";
+import {
+  StateError,
+  StateLimiter,
+  StateRelated,
+  StateRelater,
+  StateResult,
+  StateSetter,
+  StateWrite,
+} from "./types";
 
 export interface StateArrayRead<T> {
   array: readonly T[];
@@ -19,12 +27,74 @@ export class StateArray<T, L extends {} = any>
   extends StateBase<StateArrayRead<T>>
   implements StateWrite<StateArrayRead<T>, StateArrayWrite<T>, L>
 {
-  constructor() {
+  /**Creates a state which holds a value
+   * @param init initial value for state, use a promise for an eager async value, use a function returning a promise for a lazy async value
+   * @param setter function called when state value is set via setter, set true let write set it's value
+   * @param limiter functions to check and limit
+   * @param related function returning the related states to this one*/
+  constructor(
+    init:
+      | StateResult<T[]>
+      | Promise<StateResult<{ array: T[] }>>
+      | (() => Promise<StateResult<{ array: T[] }>>),
+    setter?: StateSetter<StateArrayWrite<T>>,
+    limiter?: StateLimiter<StateArrayWrite<T>>,
+    related?: StateRelater<L>
+  ) {
     super();
+    if (setter) this.write = setter;
+    if (limiter) this.#limit = limiter;
+    if (related) this.#related = related;
+    if (init instanceof Promise) {
+      this.then = init.then.bind(init);
+      init.then((value) => {
+        if (value.ok) {
+          this.#value = value.value.array;
+          this.#error = undefined;
+        } else {
+          this.#value = [];
+          this.#error = value.error;
+        }
+        //@ts-expect-error
+        delete this.then;
+      });
+    } else if (typeof init === "function") {
+      this.then = async (func) => {
+        let promise = init();
+        this.then = promise.then;
+        promise.then((value) => {
+          if (value.ok) {
+            this.#value = value.value.array;
+            this.#error = undefined;
+          } else {
+            this.#value = [];
+            this.#error = value.error;
+          }
+          //@ts-expect-error
+          delete this.then;
+        });
+        return promise.then(func);
+      };
+    } else {
+      this.#set(init);
+    }
   }
 
+  //Internal Context
   #error: StateError | undefined;
   #value: T[] = [];
+  #limit: StateLimiter<StateArrayWrite<T>> | undefined;
+  #related: StateRelater<L> | undefined;
+
+  #set(value: StateResult<T[]>) {
+    if (value.ok) {
+      this.#value = value.value;
+      this.#error = undefined;
+    } else {
+      this.#value = [];
+      this.#error = value.error;
+    }
+  }
 
   //Reader Context
   async then<TResult1 = StateArrayRead<T>>(
@@ -37,7 +107,7 @@ export class StateArray<T, L extends {} = any>
   }
 
   related(): StateRelated<L> {
-    return None();
+    return this.#related ? this.#related() : None();
   }
 
   //Writer Context
@@ -63,23 +133,17 @@ export class StateArray<T, L extends {} = any>
 
   /**Checks the value against the limit set by the limiter, if no limiter is set, undefined is returned*/
   check(value: StateArrayWrite<T>): string | undefined {
-    return undefined;
+    return this.#limit ? this.#limit.check(value) : undefined;
   }
 
   /**Limits the value to the limit set by the limiter, if no limiter is set, the value is returned as is*/
   limit(value: StateArrayWrite<T>): Option<StateArrayWrite<T>> {
-    return Some(value);
+    return this.#limit ? this.#limit.limit(value) : Some(value);
   }
 
   //Array/Owner Context
   set(value: StateResult<T[]>) {
-    if (value.ok) {
-      this.#value = value.value;
-      this.#error = undefined;
-    } else {
-      this.#value = [];
-      this.#error = value.error;
-    }
+    this.#set(value);
   }
 
   get array(): readonly T[] {
