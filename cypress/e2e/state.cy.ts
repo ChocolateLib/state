@@ -159,6 +159,13 @@ describe("Getting state value", async function () {
   });
 });
 
+describe("Writing state value", async function () {
+  it("Writing to state with error value", async function () {
+    let state = new State(Err({ code: "Yo", reason: "Yo" }));
+    state.write(2);
+  });
+});
+
 describe("Value subscriber", function () {
   it("Add one subscribers with update set true", function () {
     let state = new State(Ok(2));

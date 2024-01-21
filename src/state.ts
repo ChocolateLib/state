@@ -46,17 +46,38 @@ export class State<R, W = R, L extends {} = any>
         this.#value = value;
         //@ts-expect-error
         delete this.then;
+        //@ts-expect-error
+        delete this.write;
       });
-    } else if (typeof init === "function") {
-      this.then = (func) => {
-        let promise = init();
-        this.then = promise.then.bind(promise);
-        promise.then((value) => {
-          this.#value = value;
+      this.write = (value) => {
+        init.then(() => {
           //@ts-expect-error
-          delete this.then;
+          delete this.write;
+          this.write(value);
         });
-        return promise.then(func);
+      };
+    } else if (typeof init === "function") {
+      let writePromise = new Promise<void>((a) => {
+        this.then = (func) => {
+          let promise = init();
+          this.then = promise.then.bind(promise);
+          promise.then((value) => {
+            this.#value = value;
+            //@ts-expect-error
+            delete this.then;
+            //@ts-expect-error
+            delete this.write;
+            a();
+          });
+          return promise.then(func);
+        };
+      });
+      this.write = (value) => {
+        writePromise.then(() => {
+          //@ts-expect-error
+          delete this.write;
+          this.write(value);
+        });
       };
     } else {
       this.#value = init;
@@ -82,7 +103,7 @@ export class State<R, W = R, L extends {} = any>
   //Writer Context
   /**Requests a change of value from the state */
   write(value: W): void {
-    if (this.#setter && (this.#value as any).value !== value)
+    if (this.#setter && this.#value!.ok && (this.#value as any).value !== value)
       this.#setter(value).map(this.set.bind(this));
   }
 

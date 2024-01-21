@@ -89,6 +89,8 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.1.2
+  Fixed issue when writing to a state, that is awaiting or have a lazy function for initial value
 - ## 0.1.1
   Fixed issue with using async state with lazy function
 - ## 0.1.0

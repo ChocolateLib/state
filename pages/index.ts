@@ -1,20 +1,3 @@
-import { Err, Ok, Result } from "@chocolatelib/result";
-import {
-  State,
-  StateError,
-  StateResource,
-  StateResult,
-  StateSummer,
-} from "../src";
-
-let state = new State(async () => {
-  return Ok(2);
-});
-
-state.subscribe((val) => {
-  console.log(val);
-}, true);
-
 // class StateResourceTestServer {
 //   value: number = 0;
 //   quality: number = 1;
