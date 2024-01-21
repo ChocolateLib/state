@@ -1,6 +1,6 @@
 {
   "name": "@chocolatelib/state",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,13 +21,13 @@
     "prepublishOnly": "npm run test && npm run build:lib && npm run build:pages"
   },
   "devDependencies": {
-    "cypress": "^13.4.0",
-    "cypress-vite": "^1.4.2",
-    "start-server-and-test": "^2.0.1",
+    "cypress": "^13.6.3",
+    "cypress-vite": "^1.5.0",
+    "start-server-and-test": "^2.0.3",
     "tslib": "^2.6.2",
-    "typescript": "^5.2.2",
-    "vite": "^4.5.0",
-    "vite-plugin-dts": "^3.6.3",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12",
+    "vite-plugin-dts": "^3.7.1",
     "vite-plugin-libcss": "^1.1.1"
   },
   "author": "chocolateandmilkwin",

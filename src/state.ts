@@ -48,9 +48,9 @@ export class State<R, W = R, L extends {} = any>
         delete this.then;
       });
     } else if (typeof init === "function") {
-      this.then = async (func) => {
+      this.then = (func) => {
         let promise = init();
-        this.then = promise.then;
+        this.then = promise.then.bind(promise);
         promise.then((value) => {
           this.#value = value;
           //@ts-expect-error

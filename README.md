@@ -89,6 +89,10 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.1.1
+  Fixed issue with using async state with lazy function
+- ## 0.1.0
+  Updated to rely on result
 - ## 0.0.13
   Updated dependency
 - ## 0.0.12

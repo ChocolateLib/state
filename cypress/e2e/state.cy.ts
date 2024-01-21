@@ -24,6 +24,7 @@ describe("Initial state", function () {
         setTimeout(a, 250, Ok(2));
       })
     );
+    state.subscribe((val) => {}, true);
     await new Promise((a) => {
       setTimeout(a, 250);
     });
@@ -33,6 +34,7 @@ describe("Initial state", function () {
     await new Promise((a) => {
       setTimeout(a, 250);
     });
+
     expect((await state).unwrap).equal(2);
   });
   it("Creating a state with promise function", async function () {
@@ -45,6 +47,7 @@ describe("Initial state", function () {
     await new Promise((a) => {
       setTimeout(a, 250);
     });
+    state.subscribe((val) => {}, true);
     expect((await state).unwrap).equal(2);
     expect(performance.now()).above(time + 350);
     expect(performance.now()).below(time + 600);
