@@ -1,6 +1,6 @@
 import { StateSubscriber, StateRead, StateResult } from "./types";
 import { StateBase } from "./stateBase";
-import { Err, Ok } from "@chocolatelib/result";
+import { Err } from "@chocolatelib/result";
 
 type StateDerivedGetter<I, O = I> = (value: StateResult<I>[]) => StateResult<O>;
 
@@ -65,7 +65,7 @@ export class StateDerived<I, O = I> extends StateBase<O> {
         this.#valid = true;
         this.#buffer = this.getter([value]);
         this.updateSubscribers(this.#buffer);
-      });
+      }, true);
   }
 
   #disconnect() {
@@ -121,55 +121,5 @@ export class StateDerived<I, O = I> extends StateBase<O> {
       this.getter = getter;
       this.#connect();
     } else this.getter = getter;
-  }
-}
-
-/** The `StateAverage` class is a specialized type of `StateDerived` that represents the average of multiple `State` instances.
- * It takes multiple `State` instances as input and automatically updates its value whenever any of the input states change.
- * The value of a `StateAverage` instance is the average of the values of the input states.*/
-export class StateAverage extends StateDerived<number, number> {
-  protected getter(values: Array<StateResult<number>>): StateResult<number> {
-    let sum = 0;
-    for (let i = 0; i < values.length; i++) {
-      let value = values[i];
-      if (value.ok) sum += value.value;
-      else return value;
-    }
-    return Ok(sum / values.length);
-  }
-}
-
-/** The `StateSummer` class is a specialized type of `StateDerived` that represents the sum of multiple `State` instances.
- * It takes multiple `State` instances as input and automatically updates its value whenever any of the input states change.
- * The value of a `StateSummer` instance is the sum of the values of the input states.*/
-export class StateSummer extends StateDerived<number, number> {
-  protected getter(values: Array<StateResult<number>>): StateResult<number> {
-    let sum = 0;
-    for (let i = 0; i < values.length; i++) {
-      let value = values[i];
-      if (value.ok) sum += value.value;
-      else return value;
-    }
-    return Ok(sum);
-  }
-}
-
-/** The `StateConcat` class is a specialized type of `StateDerived` that represents the concatenation of multiple `State` instances.
- * It takes multiple `State` instances as input and automatically updates its value whenever any of the input states change.
- * The value of a `StateConcat` instance is the concatenation of the values of the input states.*/
-export class StateConcat extends StateDerived<
-  string | number | boolean,
-  string
-> {
-  protected getter(
-    values: Array<StateResult<string | number | boolean>>
-  ): StateResult<string> {
-    let sum = "";
-    for (let i = 0; i < values.length; i++) {
-      let value = values[i];
-      if (value.ok) sum += value.value;
-      else return value;
-    }
-    return Ok(sum);
   }
 }

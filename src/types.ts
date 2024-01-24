@@ -10,8 +10,6 @@ export type StateSubscriber<R> = (value: StateResult<R>) => void;
 export type StateError = {
   /**Description of the reason for the error*/
   reason: string;
-  /**2-3 letter code for error eg CL = Connection lost*/
-  code: string;
 };
 
 /**Struct returned when a state errors*/

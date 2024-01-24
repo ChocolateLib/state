@@ -89,6 +89,10 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.1.4
+  Removed code from state error as it makes no sense
+- ## 0.1.3
+  Fixed issue when derived state has a single state connected, it would not call the subscriber when the update flag was set high
 - ## 0.1.2
   Fixed issue when writing to a state, that is awaiting or have a lazy function for initial value
 - ## 0.1.1
