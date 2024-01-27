@@ -89,6 +89,8 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.1.5
+  Added enum to statelimiter
 - ## 0.1.4
   Removed code from state error as it makes no sense
 - ## 0.1.3

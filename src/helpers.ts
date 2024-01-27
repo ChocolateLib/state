@@ -1,4 +1,4 @@
-import { Option, Some } from "@chocolatelib/result";
+import { None, Option, Some } from "@chocolatelib/result";
 import { StateLimiter } from "./types";
 
 export interface StateNumberRelated {
@@ -114,6 +114,10 @@ export class StateStringLimits implements StateLimiter<string> {
   }
 }
 
+export interface StateEnumRelated {
+  list: StateEnumList;
+}
+
 export type StateEnumEntry = {
   name: string;
   description?: string;
@@ -123,12 +127,19 @@ export type StateEnumEntry = {
 export type StateEnumList = {
   [key: string | number]: StateEnumEntry;
 };
+export class StateEnumLimits<T extends string> implements StateLimiter<T> {
+  #list: StateEnumList;
+  /**String limiter struct*/
+  constructor(list: StateEnumList) {
+    this.#list = list;
+  }
 
-/**Checks if the given value is in an enum struct */
-export const stateCheckEnum = <T extends string | number | symbol>(
-  value: T,
-  enums: StateEnumList
-): string | undefined => {
-  if (value in enums) return undefined;
-  return <string>value + " is not in list";
-};
+  check(value: T): T | undefined {
+    if (value in this.#list) return undefined;
+    return (value + " is not in list") as T;
+  }
+
+  limit(_value: T): Option<T> {
+    return None();
+  }
+}
