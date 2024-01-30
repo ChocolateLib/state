@@ -89,6 +89,10 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.1.6
+  Fixed StateNumberRelated unit being a number
+  Changed some types on state to make it more obvious that Option is used
+  Changed StateDerived to support different types for each state
 - ## 0.1.5
   Added enum to statelimiter
 - ## 0.1.4

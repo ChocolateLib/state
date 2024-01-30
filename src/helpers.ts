@@ -5,7 +5,7 @@ export interface StateNumberRelated {
   min?: number;
   max?: number;
   decimals?: number;
-  unit?: number;
+  unit?: string;
 }
 
 export class StateNumberLimits implements StateLimiter<number> {

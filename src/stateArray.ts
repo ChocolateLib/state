@@ -4,7 +4,6 @@ import {
   StateError,
   StateLimiter,
   StateRelated,
-  StateRelater,
   StateResult,
   StateSetter,
   StateWrite,
@@ -39,7 +38,7 @@ export class StateArray<T, L extends {} = any>
       | (() => Promise<StateResult<{ array: T[] }>>),
     setter?: StateSetter<StateArrayWrite<T>>,
     limiter?: StateLimiter<StateArrayWrite<T>>,
-    related?: StateRelater<L>
+    related?: () => Option<StateRelated<L>>
   ) {
     super();
     if (setter) this.write = setter;
@@ -84,7 +83,7 @@ export class StateArray<T, L extends {} = any>
   #error: StateError | undefined;
   #value: T[] = [];
   #limit: StateLimiter<StateArrayWrite<T>> | undefined;
-  #related: StateRelater<L> | undefined;
+  #related: (() => Option<StateRelated<L>>) | undefined;
 
   #set(value: StateResult<T[]>) {
     if (value.ok) {
@@ -106,7 +105,7 @@ export class StateArray<T, L extends {} = any>
     else return func(Ok({ array: this.#value }));
   }
 
-  related(): StateRelated<L> {
+  related(): Option<StateRelated<L>> {
     return this.#related ? this.#related() : None();
   }
 

@@ -1,4 +1,4 @@
-import { None } from "@chocolatelib/result";
+import { None, Option } from "@chocolatelib/result";
 import { StateRead, StateRelated, StateResult, StateSubscriber } from "./types";
 
 export abstract class StateBase<R, L extends {} = any>
@@ -31,7 +31,7 @@ export abstract class StateBase<R, L extends {} = any>
     return func;
   }
 
-  related(): StateRelated<L> {
+  related(): Option<StateRelated<L>> {
     return None();
   }
 

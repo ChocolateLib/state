@@ -3,7 +3,6 @@ import { StateBase } from "./stateBase";
 import {
   StateLimiter,
   StateRelated,
-  StateRelater,
   StateResult,
   StateSetter,
   StateWrite,
@@ -25,7 +24,7 @@ export class State<R, W = R, L extends {} = any>
       | (() => Promise<StateResult<R>>),
     setter?: StateSetter<R, W> | true,
     limiter?: StateLimiter<W>,
-    related?: StateRelater<L>
+    related?: () => Option<StateRelated<L>>
   ) {
     super();
     if (setter)
@@ -87,7 +86,7 @@ export class State<R, W = R, L extends {} = any>
   #value: StateResult<R> | undefined;
   #setter: StateSetter<R, W> | undefined;
   #limit: StateLimiter<W> | undefined;
-  #related: StateRelater<L> | undefined;
+  #related: (() => Option<StateRelated<L>>) | undefined;
 
   //Reader Context
   async then<TResult1 = R>(
@@ -96,7 +95,7 @@ export class State<R, W = R, L extends {} = any>
     return func(this.#value!);
   }
 
-  related(): StateRelated<L> {
+  related(): Option<StateRelated<L>> {
     return this.#related ? this.#related() : None();
   }
 

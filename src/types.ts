@@ -24,12 +24,9 @@ export type StateLimiter<W> = {
 };
 
 /**Map of states related to a state */
-export type StateRelated<R> = Option<{
+export type StateRelated<R> = {
   [Property in keyof R]: StateRead<R[keyof R], any> | undefined;
-}>;
-
-/**Function used to return the relation state*/
-export type StateRelater<L extends {} = any> = () => StateRelated<L>;
+};
 
 export interface StateRead<R, L extends {} = any> {
   /**Allows getting value of state  */
@@ -42,7 +39,7 @@ export interface StateRead<R, L extends {} = any> {
   /**This removes a function as a subscriber to the state*/
   unsubscribe<B extends StateSubscriber<R>>(func: B): B;
   /**Returns a map of related states to this state*/
-  related(): StateRelated<L>;
+  related(): Option<StateRelated<L>>;
 }
 
 export interface StateWrite<R, W = R, L extends {} = any>
