@@ -5,7 +5,6 @@ import {
   StateLimiter,
   StateRelated,
   StateResult,
-  StateSetter,
   StateWrite,
 } from "./types";
 
@@ -36,7 +35,9 @@ export class StateArray<T, L extends {} = any>
       | StateResult<T[]>
       | Promise<StateResult<{ array: T[] }>>
       | (() => Promise<StateResult<{ array: T[] }>>),
-    setter?: StateSetter<StateArrayWrite<T>>,
+    setter?: (
+      value: StateArrayWrite<T>
+    ) => Option<StateResult<StateArrayWrite<T>>>,
     limiter?: StateLimiter<StateArrayWrite<T>>,
     related?: () => Option<StateRelated<L>>
   ) {

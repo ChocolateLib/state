@@ -1,12 +1,6 @@
 import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import {
-  StateLimiter,
-  StateRelated,
-  StateResult,
-  StateSetter,
-  StateWrite,
-} from "./types";
+import { StateLimiter, StateRelated, StateResult, StateWrite } from "./types";
 
 export class State<R, W = R, L extends {} = any>
   extends StateBase<R, L>
@@ -22,7 +16,7 @@ export class State<R, W = R, L extends {} = any>
       | StateResult<R>
       | Promise<StateResult<R>>
       | (() => Promise<StateResult<R>>),
-    setter?: StateSetter<R, W> | true,
+    setter?: ((value: W) => Option<StateResult<R>>) | true,
     limiter?: StateLimiter<W>,
     related?: () => Option<StateRelated<L>>
   ) {
@@ -84,7 +78,7 @@ export class State<R, W = R, L extends {} = any>
   }
 
   #value: StateResult<R> | undefined;
-  #setter: StateSetter<R, W> | undefined;
+  #setter: ((value: W) => Option<StateResult<R>>) | undefined;
   #limit: StateLimiter<W> | undefined;
   #related: (() => Option<StateRelated<L>>) | undefined;
 

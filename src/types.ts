@@ -12,9 +12,6 @@ export type StateError = {
   reason: string;
 };
 
-/**Struct returned when a state errors*/
-export type StateSetter<R, W = R> = (value: W) => Option<StateResult<R>>;
-
 /**Function used to limit value to within state limits*/
 export type StateLimiter<W> = {
   /**Limits given value to valid range if possible returns None if not possible */
