@@ -1,4 +1,4 @@
-import { None, Option, Some } from "@chocolatelib/result";
+import { Option, Some } from "@chocolatelib/result";
 import { StateLimiter } from "./types";
 
 export interface StateNumberRelated {
@@ -139,7 +139,7 @@ export class StateEnumLimits<T extends string> implements StateLimiter<T> {
     return (value + " is not in list") as T;
   }
 
-  limit(_value: T): Option<T> {
-    return None();
+  limit(value: T): Option<T> {
+    return Some(value);
   }
 }
