@@ -4,18 +4,17 @@ import {
   State,
   StateError,
   StateNumberLimits,
-  StateResult,
   StateStringLimits,
 } from "../../src";
 
 describe("Initial state", function () {
   it("Creating a state with initial error", async function () {
     let state = new State(Err({ reason: "Yo", code: "Yo" }));
-    expect((await state).err).equal(true);
+    expect(state.get().err).equal(true);
   });
   it("Creating a state with initial value", async function () {
     let state = new State(Ok(2));
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
   });
   it("Creating a state with function", function (done) {
     let time = performance.now();
@@ -34,31 +33,35 @@ describe("Initial state", function () {
 describe("Setting state value", function () {
   it("From owner context", async function () {
     let state = new State(Ok(2));
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.set(Ok(4));
-    expect((await state).unwrap).equal(4);
+    expect(state.get().unwrap).equal(4);
   });
   it("From user context with no setter function", async function () {
     let state = new State(Ok(2));
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.write(4);
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
   });
   it("From user context with standard setter function", async function () {
     let state = new State(Ok(2), true);
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.set(Ok(4));
-    expect((await state).unwrap).equal(4);
+    expect(state.get().unwrap).equal(4);
   });
   it("From user context with custom function", async function () {
     let state = new State(Ok(2), (val) => Some(Ok(val * 2)));
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.write(4);
-    expect((await state).unwrap).equal(8);
+    expect(state.get().unwrap).equal(8);
   });
 });
 
 describe("Getting state value", async function () {
+  it("Using get", async function () {
+    let state = new State(Ok(2));
+    expect(state.get().unwrap).equal(2);
+  });
   it("Using await", async function () {
     let state = new State(Ok(2));
     expect((await state).unwrap).equal(2);
@@ -223,11 +226,11 @@ describe("Value subscriber", function () {
 describe("Number limits", function () {
   it("Min max", async function () {
     let state = new State(Ok(2), true, new StateNumberLimits(5, 54));
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.write(1);
-    expect((await state).unwrap).equal(5);
+    expect(state.get().unwrap).equal(5);
     state.write(99);
-    expect((await state).unwrap).equal(54);
+    expect(state.get().unwrap).equal(54);
   });
   it("Step sizes", async function () {
     let state = new State(
@@ -235,9 +238,9 @@ describe("Number limits", function () {
       true,
       new StateNumberLimits(undefined, undefined, 0.22)
     );
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.write(4);
-    expect((await state).unwrap).equal(3.96);
+    expect(state.get().unwrap).equal(3.96);
   });
   it("Step sizes and offset", async function () {
     let state = new State(
@@ -245,9 +248,9 @@ describe("Number limits", function () {
       true,
       new StateNumberLimits(undefined, undefined, 0.22, 0.12)
     );
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.write(4);
-    expect((await state).unwrap).equal(4.08);
+    expect(state.get().unwrap).equal(4.08);
   });
   it("Step sizes and offset and min max", async function () {
     let state = new State(
@@ -255,29 +258,29 @@ describe("Number limits", function () {
       true,
       new StateNumberLimits(8, 77, 0.22, 0.12)
     );
-    expect((await state).unwrap).equal(2);
+    expect(state.get().unwrap).equal(2);
     state.write(4);
-    expect((await state).unwrap).equal(8);
+    expect(state.get().unwrap).equal(8);
     state.write(90);
-    expect((await state).unwrap).equal(77);
+    expect(state.get().unwrap).equal(77);
   });
 });
 
 describe("String limits", function () {
   it("Max length", async function () {
     let state = new State(Ok("2"), true, new StateStringLimits(5));
-    expect((await state).unwrap).equal("2");
+    expect(state.get().unwrap).equal("2");
     state.write("1");
-    expect((await state).unwrap).equal("1");
+    expect(state.get().unwrap).equal("1");
     state.write("999999");
-    expect((await state).unwrap).equal("99999");
+    expect(state.get().unwrap).equal("99999");
   });
   it("Max bytes", async function () {
     let state = new State(Ok("2"), true, new StateStringLimits(99, 40));
-    expect((await state).unwrap).equal("2");
+    expect(state.get().unwrap).equal("2");
     state.write("1");
-    expect((await state).unwrap).equal("1");
+    expect(state.get().unwrap).equal("1");
     state.write("æøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæøæ");
-    expect((await state).unwrap).equal("æøæøæøæøæøæøæøæøæøæø");
+    expect(state.get().unwrap).equal("æøæøæøæøæøæøæøæøæøæø");
   });
 });

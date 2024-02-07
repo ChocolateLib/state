@@ -5,17 +5,17 @@ import { StateDerived, State } from "../../src";
 describe("Getting value", function () {
   it("Getting value from StateDerived with no States", async function () {
     let derived = new StateDerived();
-    expect((await derived).err).equal(true);
+    expect(derived.get().err).equal(true);
   });
   it("Getting value from StateDerived with one state without function", async function () {
     let state1 = new State(Ok(5));
     let derived = new StateDerived(state1);
-    expect((await derived).unwrap).equal(5);
+    expect(derived.get().unwrap).equal(5);
   });
   it("Getting value from StateDerived with two states without function", async function () {
     let state1 = new State(Ok(5));
     let derived = new StateDerived(state1);
-    expect((await derived).unwrap).equal(5);
+    expect(derived.get().unwrap).equal(5);
   });
   it("Getting value from StateDerived with state with read function set", async function () {
     let state1 = new State(Ok(5));
@@ -27,7 +27,7 @@ describe("Getting value", function () {
       state1,
       state2
     );
-    expect((await derived).unwrap).equal(30);
+    expect(derived.get().unwrap).equal(30);
   });
 });
 
@@ -102,6 +102,93 @@ describe("Subscribers", function () {
   });
 });
 
+describe("Change function and states", function () {
+  it("Changing getter function with no subscribers", async function () {
+    let state1 = new State(Ok(5));
+    let state2 = new State(Ok(6));
+    let derived = new StateDerived(
+      ([a, b]) => {
+        return Ok(a.unwrap * b.unwrap);
+      },
+      state1,
+      state2
+    );
+    expect(derived.get().unwrap).equal(30);
+    state1.set(Ok(6));
+    expect(derived.get().unwrap).equal(36);
+    derived.setGetter(([a, b]) => {
+      return Ok(a.unwrap + b.unwrap);
+    });
+    expect(derived.get().unwrap).equal(12);
+  });
+  it("Changing getter function with subscribers", function (done) {
+    let state1 = new State(Ok(5));
+    let state2 = new State(Ok(6));
+    let derived = new StateDerived(
+      ([a, b]) => {
+        return Ok(a.unwrap * b.unwrap);
+      },
+      state1,
+      state2
+    );
+    derived.subscribe((value) => {
+      expect(value.unwrap).equal(12);
+      done();
+    }, true);
+    expect(derived.get().unwrap).equal(30);
+    state1.set(Ok(6));
+    expect(derived.get().unwrap).equal(36);
+    derived.setGetter(([a, b]) => {
+      return Ok(a.unwrap + b.unwrap);
+    });
+    expect(derived.get().unwrap).equal(12);
+  });
+  it("Changing states with no subscribers", async function () {
+    let state1 = new State(Ok(5));
+    let state2 = new State(Ok(6));
+    let derived = new StateDerived(
+      ([a, b]) => {
+        return Ok(a.unwrap * b.unwrap);
+      },
+      state1,
+      state2
+    );
+    expect(derived.get().unwrap).equal(30);
+    state1.set(Ok(6));
+    expect(derived.get().unwrap).equal(36);
+    let state3 = new State(Ok(7));
+    let state4 = new State(Ok(8));
+    derived.setStates(state3, state4);
+    expect(derived.get().unwrap).equal(56);
+    state3.set(Ok(6));
+    expect(derived.get().unwrap).equal(48);
+  });
+  it("Changing states with subscribers", function (done) {
+    let state1 = new State(Ok(5));
+    let state2 = new State(Ok(6));
+    let derived = new StateDerived(
+      ([a, b]) => {
+        return Ok(a.unwrap * b.unwrap);
+      },
+      state1,
+      state2
+    );
+    derived.subscribe((value) => {
+      expect(value.unwrap).equal(48);
+      done();
+    }, true);
+    expect(derived.get().unwrap).equal(30);
+    state1.set(Ok(6));
+    expect(derived.get().unwrap).equal(36);
+    let state3 = new State(Ok(7));
+    let state4 = new State(Ok(8));
+    derived.setStates(state3, state4);
+    expect(derived.get().unwrap).equal(56);
+    state3.set(Ok(6));
+    expect(derived.get().unwrap).equal(48);
+  });
+});
+
 describe("Error Scenarios", function () {
   it("If an array is passed to the StateDerived, and the array is modified, the StateDerived shall not be affected", async function () {
     let state1 = new State(Ok(1));
@@ -110,10 +197,10 @@ describe("Error Scenarios", function () {
     let state4 = new State(Ok(4));
     let States = [state1, state2, state3];
     let derived = new StateDerived(...States);
-    expect((await derived).unwrap).equal(1);
+    expect(derived.get().unwrap).equal(1);
     States.unshift(state4);
-    expect((await derived).unwrap).equal(1);
+    expect(derived.get().unwrap).equal(1);
     States.shift();
-    expect((await derived).unwrap).equal(1);
+    expect(derived.get().unwrap).equal(1);
   });
 });
