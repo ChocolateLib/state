@@ -1,19 +1,19 @@
-import { StateSubscriber, StateRead, StateResult } from "./types";
+import { StateSubscriber, StateResult, StateReadAsync } from "./types";
 import { StateBase } from "./stateBase";
 import { Err } from "@chocolatelib/result";
 
 type StateReadArray<T extends any[]> = {
-  [K in keyof T]: StateRead<T[K]>;
+  [K in keyof T]: StateReadAsync<T[K]>;
 };
 type StateResultArray<T extends any[]> = {
   [K in keyof T]: StateResult<T[K]>;
 };
 type Tail<T extends any[]> = T extends [any, ...infer Rest] ? Rest : never;
 
-/**The `StateDerived` class is used to create a state which is derived from other states. The derived state will update when any of the other states update.*/
-export class StateDerived<I extends any[], O = I[0]>
+/**The `StateDerivedAsync` class is used to create a state which is derived from other states. The derived state will update when any of the other states update.*/
+export class StateDerivedAsync<I extends any[], O = I[0]>
   extends StateBase<O>
-  implements StateRead<O>
+  implements StateReadAsync<O>
 {
   /**Creates a state which is derived from other states. The derived state will update when any of the other states update.
    * @param state - The first state to be used in the derived state. If this is a function, it will be used as the getter function.
@@ -24,14 +24,16 @@ export class StateDerived<I extends any[], O = I[0]>
   );
   constructor(...states: StateReadArray<I>);
   constructor(
-    state?: StateRead<I[0]> | ((value: StateResultArray<I>) => StateResult<O>),
+    state?:
+      | StateReadAsync<I[0]>
+      | ((value: StateResultArray<I>) => StateResult<O>),
     ...states: Tail<StateReadArray<I>>
   ) {
     super();
     if (typeof state === "function") {
       this.getter = state;
       this.#states = states as any;
-    } else this.#states = [...arguments] as any;
+    } else this.#states = arguments as any;
   }
 
   #valid: boolean = false;
@@ -110,21 +112,8 @@ export class StateDerived<I extends any[], O = I[0]>
   ): Promise<TResult1> {
     if (this.#valid) return func(this.#buffer!);
     else if (this.#states.length)
-      return func(
-        this.getter(
-          this.#states.map((state) => state.get()) as StateResultArray<I>
-        )
-      );
+      return func(this.getter(await Promise.all(this.#states)));
     else return func(Err({ reason: "No states registered", code: "INV" }));
-  }
-
-  get(): StateResult<O> {
-    if (this.#valid) return this.#buffer!;
-    else if (this.#states.length)
-      return this.getter(
-        this.#states.map((state) => state.get()) as StateResultArray<I>
-      );
-    else return Err({ reason: "No states registered", code: "INV" });
   }
 
   //Owner

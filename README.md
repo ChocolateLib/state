@@ -89,6 +89,8 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.1.9
+  Moved to a async/sync seperate setup, as there are too many situtation where true sync is needed
 - ## 0.1.8
   Changed type of setter to make i more user friendly
 - ## 0.1.7

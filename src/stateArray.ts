@@ -1,12 +1,6 @@
 import { Err, None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import {
-  StateError,
-  StateLimiter,
-  StateRelated,
-  StateResult,
-  StateWrite,
-} from "./types";
+import { StateError, StateLimiter, StateResult, StateWrite } from "./types";
 
 export interface StateArrayRead<T> {
   array: readonly T[];
@@ -39,7 +33,7 @@ export class StateArray<T, L extends {} = any>
       value: StateArrayWrite<T>
     ) => Option<StateResult<StateArrayWrite<T>>>,
     limiter?: StateLimiter<StateArrayWrite<T>>,
-    related?: () => Option<StateRelated<L>>
+    related?: () => Option<L>
   ) {
     super();
     if (setter) this.write = setter;
@@ -84,7 +78,7 @@ export class StateArray<T, L extends {} = any>
   #error: StateError | undefined;
   #value: T[] = [];
   #limit: StateLimiter<StateArrayWrite<T>> | undefined;
-  #related: (() => Option<StateRelated<L>>) | undefined;
+  #related: (() => Option<L>) | undefined;
 
   #set(value: StateResult<T[]>) {
     if (value.ok) {
@@ -106,7 +100,12 @@ export class StateArray<T, L extends {} = any>
     else return func(Ok({ array: this.#value }));
   }
 
-  related(): Option<StateRelated<L>> {
+  get(): StateResult<StateArrayRead<T>> {
+    if (this.#error) return Err(this.#error);
+    else return Ok({ array: this.#value });
+  }
+
+  related(): Option<L> {
     return this.#related ? this.#related() : None();
   }
 

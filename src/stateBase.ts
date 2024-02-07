@@ -1,8 +1,13 @@
 import { None, Option } from "@chocolatelib/result";
-import { StateRead, StateRelated, StateResult, StateSubscriber } from "./types";
+import {
+  StateReadAsync,
+  StateRelated,
+  StateResult,
+  StateSubscriber,
+} from "./types";
 
-export abstract class StateBase<R, L extends {} = any>
-  implements StateRead<R, L>
+export abstract class StateBase<R, L extends StateRelated = any>
+  implements StateReadAsync<R, L>
 {
   protected subscribers: StateSubscriber<R>[] = [];
 
@@ -16,6 +21,7 @@ export abstract class StateBase<R, L extends {} = any>
       console.warn("Function already registered as subscriber");
       return func;
     }
+    this.onSubscribe(this.subscribers.length == 0);
     this.subscribers.push(func);
     if (update)
       this.then((value) => {
@@ -26,24 +32,34 @@ export abstract class StateBase<R, L extends {} = any>
 
   unsubscribe<B extends StateSubscriber<R>>(func: B): B {
     const index = this.subscribers.indexOf(func);
-    if (index != -1) this.subscribers.splice(index, 1);
-    else console.warn("Subscriber not found with state", this, func);
+    if (index != -1) {
+      this.onUnsubscribe(this.subscribers.length == 1);
+      this.subscribers.splice(index, 1);
+    } else console.warn("Subscriber not found with state", this, func);
     return func;
   }
 
-  related(): Option<StateRelated<L>> {
+  related(): Option<L> {
     return None();
   }
 
   //Owner Context
+  /**Called when subscriber is added*/
+  protected onSubscribe(_first: boolean) {}
+  /**Called when subscriber is removed*/
+  protected onUnsubscribe(_last: boolean) {}
+
+  /**Returns if the state is being used */
   inUse(): boolean {
     return Boolean(this.subscribers.length);
   }
 
+  /**Returns if the state has a subscriber */
   hasSubscriber(subscriber: StateSubscriber<R>): boolean {
     return this.subscribers.includes(subscriber);
   }
 
+  /**Updates all subscribers with a value */
   protected updateSubscribers(value: StateResult<R>): void {
     for (let i = 0, m = this.subscribers.length; i < m; i++) {
       try {

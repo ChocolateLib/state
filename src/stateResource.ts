@@ -4,7 +4,7 @@ import {
   StateLimiter,
   StateResult,
   StateSubscriber,
-  StateWrite,
+  StateWriteAsync,
 } from "./types";
 
 /**State Resource
@@ -22,7 +22,7 @@ import {
  * this can prevent unneeded calls if the user is switching around quickly between things referencing states */
 export abstract class StateResource<R, W extends R = R>
   extends StateBase<R>
-  implements StateWrite<R, W>
+  implements StateWriteAsync<R, W>
 {
   /**Stores the last time when buffer was valid*/
   #valid: number = 0;

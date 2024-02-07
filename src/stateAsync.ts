@@ -1,18 +1,21 @@
 import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateLimiter, StateRelated, StateResult, StateWrite } from "./types";
+import { StateLimiter, StateResult, StateWriteAsync } from "./types";
 
-export class State<R, W = R, L extends StateRelated = any>
+export class StateAsync<R, W = R, L extends {} = any>
   extends StateBase<R, L>
-  implements StateWrite<R, W, L>
+  implements StateWriteAsync<R, W, L>
 {
-  /**Creates a state which holds a value
-   * @param init initial value for state, use a function returning a value for a lazy value (does not call function until the state is first used)
+  /**Creates a state which holds a value, this one can be instantiated with an async value
+   * @param init initial value for state, use a promise for an eager async value, use a function returning a promise for a lazy async value
    * @param setter function called when state value is set via setter, set true let write set it's value
    * @param limiter functions to check and limit
    * @param related function returning the related states to this one*/
   constructor(
-    init: StateResult<R> | (() => StateResult<R>),
+    init:
+      | StateResult<R>
+      | Promise<StateResult<R>>
+      | (() => Promise<StateResult<R>>),
     setter?: ((value: W) => Option<StateResult<R>>) | true,
     limiter?: StateLimiter<W>,
     related?: () => Option<L>
@@ -30,29 +33,36 @@ export class State<R, W = R, L extends StateRelated = any>
           : setter;
     if (limiter) this.#limit = limiter;
     if (related) this.#related = related;
-    if (typeof init === "function") {
+    if (init instanceof Promise) {
+      this.then = init.then.bind(init);
+      init.then((value) => {
+        this.#value = value;
+        //@ts-expect-error
+        delete this.then;
+        //@ts-expect-error
+        delete this.write;
+      });
+      this.write = (value) => {
+        init.then(() => {
+          //@ts-expect-error
+          delete this.write;
+          this.write(value);
+        });
+      };
+    } else if (typeof init === "function") {
       let writePromise = new Promise<void>((a) => {
-        this.then = async (func) => {
-          this.#value = init();
-          //@ts-expect-error
-          delete this.then;
-          //@ts-expect-error
-          delete this.write;
-          //@ts-expect-error
-          delete this.get;
-          a();
-          return func(this.#value);
-        };
-        this.get = () => {
-          this.#value = init();
-          //@ts-expect-error
-          delete this.then;
-          //@ts-expect-error
-          delete this.write;
-          //@ts-expect-error
-          delete this.get;
-          a();
-          return this.#value;
+        this.then = (func) => {
+          let promise = init();
+          this.then = promise.then.bind(promise);
+          promise.then((value) => {
+            this.#value = value;
+            //@ts-expect-error
+            delete this.then;
+            //@ts-expect-error
+            delete this.write;
+            a();
+          });
+          return promise.then(func);
         };
       });
       this.write = (value) => {
@@ -77,10 +87,6 @@ export class State<R, W = R, L extends StateRelated = any>
     func: (value: StateResult<R>) => TResult1 | PromiseLike<TResult1>
   ): Promise<TResult1> {
     return func(this.#value!);
-  }
-  /**Gets the value of the state */
-  get(): StateResult<R> {
-    return this.#value!;
   }
 
   related(): Option<L> {
@@ -109,5 +115,10 @@ export class State<R, W = R, L extends StateRelated = any>
   set(value: StateResult<R>) {
     this.#value = value;
     this.updateSubscribers(value);
+  }
+
+  /**Gets the value of the state */
+  get(): StateResult<R> {
+    return this.#value!;
   }
 }
