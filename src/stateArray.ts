@@ -1,6 +1,6 @@
 import { Err, None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateError, StateLimiter, StateResult, StateWrite } from "./types";
+import { StateError, StateResult, StateWrite } from "./types";
 
 export interface StateArrayRead<T> {
   array: readonly T[];
@@ -22,8 +22,7 @@ export class StateArray<T, L extends {} = any>
   /**Creates a state which holds a value
    * @param init initial value for state, use a promise for an eager async value, use a function returning a promise for a lazy async value
    * @param setter function called when state value is set via setter, set true let write set it's value
-   * @param limiter functions to check and limit
-   * @param related function returning the related states to this one*/
+   * @param helper functions to check and limit*/
   constructor(
     init:
       | StateResult<T[]>
@@ -32,13 +31,15 @@ export class StateArray<T, L extends {} = any>
     setter?: (
       value: StateArrayWrite<T>
     ) => Option<StateResult<StateArrayWrite<T>>>,
-    limiter?: StateLimiter<StateArrayWrite<T>>,
-    related?: () => Option<L>
+    helper?: {
+      limit?: (value: StateArrayWrite<T>) => Option<StateArrayWrite<T>>;
+      check?: (value: StateArrayWrite<T>) => Option<string>;
+      related?: () => Option<L>;
+    }
   ) {
     super();
     if (setter) this.write = setter;
-    if (limiter) this.#limit = limiter;
-    if (related) this.#related = related;
+    if (helper) this.#helper = helper;
     if (init instanceof Promise) {
       this.then = init.then.bind(init);
       init.then((value) => {
@@ -77,8 +78,13 @@ export class StateArray<T, L extends {} = any>
   //Internal Context
   #error: StateError | undefined;
   #value: T[] = [];
-  #limit: StateLimiter<StateArrayWrite<T>> | undefined;
-  #related: (() => Option<L>) | undefined;
+  #helper:
+    | {
+        limit?: (value: StateArrayWrite<T>) => Option<StateArrayWrite<T>>;
+        check?: (value: StateArrayWrite<T>) => Option<string>;
+        related?: () => Option<L>;
+      }
+    | undefined;
 
   #set(value: StateResult<T[]>) {
     if (value.ok) {
@@ -106,7 +112,7 @@ export class StateArray<T, L extends {} = any>
   }
 
   related(): Option<L> {
-    return this.#related ? this.#related() : None();
+    return this.#helper?.related ? this.#helper.related() : None();
   }
 
   //Writer Context
@@ -131,13 +137,13 @@ export class StateArray<T, L extends {} = any>
   }
 
   /**Checks the value against the limit set by the limiter, if no limiter is set, undefined is returned*/
-  check(value: StateArrayWrite<T>): string | undefined {
-    return this.#limit ? this.#limit.check(value) : undefined;
+  check(value: StateArrayWrite<T>): Option<string> {
+    return this.#helper?.check ? this.#helper.check(value) : None();
   }
 
   /**Limits the value to the limit set by the limiter, if no limiter is set, the value is returned as is*/
   limit(value: StateArrayWrite<T>): Option<StateArrayWrite<T>> {
-    return this.#limit ? this.#limit.limit(value) : Some(value);
+    return this.#helper?.limit ? this.#helper.limit(value) : Some(value);
   }
 
   //Array/Owner Context

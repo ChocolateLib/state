@@ -89,6 +89,8 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.2.0
+  Changed helper system around
 - ## 0.1.9
   Moved to a async/sync seperate setup, as there are too many situtation where true sync is needed
 - ## 0.1.8

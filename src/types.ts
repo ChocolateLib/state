@@ -53,22 +53,14 @@ export interface StateRead<R, L extends StateRelated = any>
 //     \ \/  \/ / |  _  /  | |    | |  |  __| |  _  /  | |   | |  | | . ` |  | |  |  __|   > <    | |
 //      \  /\  /  | | \ \ _| |_   | |  | |____| | \ \  | |___| |__| | |\  |  | |  | |____ / . \   | |
 //       \/  \/   |_|  \_\_____|  |_|  |______|_|  \_\  \_____\____/|_| \_|  |_|  |______/_/ \_\  |_|
-export type StateLimiter<W> = {
+export interface StateWriteAsync<R, W = R, L extends StateRelated = any>
+  extends StateReadAsync<R, L> {
+  /** This sets the value of the state and updates all subscribers */
+  write(value: W): void;
   /**Limits given value to valid range if possible returns None if not possible */
   limit: (value: W) => Option<W>;
   /**Checks if the value is valid and returns reason for invalidity */
-  check: (value: W) => string | undefined;
-};
-
-export interface StateWriteAsync<R, W = R, L extends StateRelated = any>
-  extends StateReadAsync<R, L>,
-    StateLimiter<W> {
-  /** This sets the value of the state and updates all subscribers */
-  write(value: W): void;
+  check: (value: W) => Option<string>;
 }
 export interface StateWrite<R, W = R, L extends StateRelated = any>
-  extends StateRead<R, L>,
-    StateLimiter<W> {
-  /** This sets the value of the state and updates all subscribers */
-  write(value: W): void;
-}
+  extends StateWriteAsync<R, W, L> {}

@@ -1,2 +1,2 @@
 import { Err, Ok } from "@chocolatelib/result";
-import { State, StateDerived } from "../src";
+import { State, StateDerived, StateNumberHelper } from "../src";

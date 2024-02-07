@@ -1,6 +1,6 @@
 import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateLimiter, StateResult, StateWriteAsync } from "./types";
+import { StateResult, StateWriteAsync } from "./types";
 
 export class StateAsync<R, W = R, L extends {} = any>
   extends StateBase<R, L>
@@ -17,22 +17,24 @@ export class StateAsync<R, W = R, L extends {} = any>
       | Promise<StateResult<R>>
       | (() => Promise<StateResult<R>>),
     setter?: ((value: W) => Option<StateResult<R>>) | true,
-    limiter?: StateLimiter<W>,
-    related?: () => Option<L>
+    helper?: {
+      limit?: (value: W) => Option<W>;
+      check?: (value: W) => Option<string>;
+      related?: () => Option<L>;
+    }
   ) {
     super();
     if (setter)
       this.#setter =
         setter === true
           ? (value) =>
-              this.#limit
-                ? this.#limit
+              this.#helper?.limit
+                ? this.#helper
                     .limit(value as any)
                     .map<StateResult<R>>((val) => Ok(val as any))
                 : Some(Ok(value as any))
           : setter;
-    if (limiter) this.#limit = limiter;
-    if (related) this.#related = related;
+    if (helper) this.#helper = helper;
     if (init instanceof Promise) {
       this.then = init.then.bind(init);
       init.then((value) => {
@@ -79,8 +81,13 @@ export class StateAsync<R, W = R, L extends {} = any>
 
   #value: StateResult<R> | undefined;
   #setter: ((value: W) => Option<StateResult<R>>) | undefined;
-  #limit: StateLimiter<W> | undefined;
-  #related: (() => Option<L>) | undefined;
+  #helper:
+    | {
+        limit?: (value: W) => Option<W>;
+        check?: (value: W) => Option<string>;
+        related?: () => Option<L>;
+      }
+    | undefined;
 
   //Reader Context
   async then<TResult1 = R>(
@@ -90,7 +97,7 @@ export class StateAsync<R, W = R, L extends {} = any>
   }
 
   related(): Option<L> {
-    return this.#related ? this.#related() : None();
+    return this.#helper?.related ? this.#helper.related() : None();
   }
 
   //Writer Context
@@ -101,13 +108,13 @@ export class StateAsync<R, W = R, L extends {} = any>
   }
 
   /**Checks the value against the limit set by the limiter, if no limiter is set, undefined is returned*/
-  check(value: W): string | undefined {
-    return this.#limit ? this.#limit.check(value) : undefined;
+  check(value: W): Option<string> {
+    return this.#helper?.check ? this.#helper.check(value) : None();
   }
 
   /**Limits the value to the limit set by the limiter, if no limiter is set, the value is returned as is*/
   limit(value: W): Option<W> {
-    return this.#limit ? this.#limit.limit(value) : Some(value);
+    return this.#helper?.limit ? this.#helper.limit(value) : Some(value);
   }
 
   //Owner Context

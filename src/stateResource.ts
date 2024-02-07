@@ -1,11 +1,6 @@
-import { Err, Option, Some } from "@chocolatelib/result";
+import { Err, None, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import {
-  StateLimiter,
-  StateResult,
-  StateSubscriber,
-  StateWriteAsync,
-} from "./types";
+import { StateResult, StateSubscriber, StateWriteAsync } from "./types";
 
 /**State Resource
  * state for representing a remote resource
@@ -136,8 +131,8 @@ export abstract class StateResource<R, W extends R = R>
 
   abstract write(value: W): void;
 
-  check(_value: W): string | undefined {
-    return undefined;
+  check(_value: W): Option<string> {
+    return None();
   }
 
   limit(value: W): Option<W> {
@@ -162,7 +157,11 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
     timeout: number,
     retention: number,
     setter?: (value: W, state: StateResourceFunc<R, W>) => void,
-    limiter?: StateLimiter<W>
+    helper?: {
+      limit?: (value: W) => Option<W>;
+      check?: (value: W) => Option<string>;
+      related?: () => Option<any>;
+    }
   ) {
     super();
     this.singleGet = once;
@@ -172,14 +171,20 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
     this.#timeout = timeout;
     this.#retention = retention;
     if (setter) this.#setter = setter;
-    if (limiter) this.#limit = limiter;
+    if (helper) this.#helper = helper;
   }
 
   #setter: ((value: W, state: StateResourceFunc<R, W>) => void) | undefined;
   #debounce: number;
   #timeout: number;
   #retention: number;
-  #limit: StateLimiter<W> | undefined;
+  #helper:
+    | {
+        limit?: (value: W) => Option<W>;
+        check?: (value: W) => Option<string>;
+        related?: () => Option<any>;
+      }
+    | undefined;
 
   /**Debounce delaying one time value retrival*/
   get debounce(): number {
@@ -211,11 +216,11 @@ export class StateResourceFunc<R, W extends R = R> extends StateResource<R, W> {
     if (this.#setter) this.#setter(value, this);
   }
 
-  check(value: W): string | undefined {
-    return this.#limit ? this.#limit.check(value) : undefined;
+  check(value: W): Option<string> {
+    return this.#helper?.check ? this.#helper.check(value) : None();
   }
 
   limit(value: W): Option<W> {
-    return this.#limit ? this.#limit.limit(value) : Some(value);
+    return this.#helper?.limit ? this.#helper.limit(value) : Some(value);
   }
 }
