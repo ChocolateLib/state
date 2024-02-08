@@ -2,7 +2,7 @@ import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
 import { StateHelper, StateRelated, StateResult, StateWrite } from "./types";
 
-export class State<R, W = R, L extends StateRelated = any, A = W>
+export class State<R, W = R, L extends StateRelated = {}, A = W>
   extends StateBase<R, L>
   implements StateWrite<R, W, L>
 {

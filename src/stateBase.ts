@@ -6,7 +6,7 @@ import {
   StateSubscriber,
 } from "./types";
 
-export abstract class StateBase<R, L extends StateRelated = any>
+export abstract class StateBase<R, L extends StateRelated = {}>
   implements StateReadAsync<R, L>
 {
   protected subscribers: StateSubscriber<R>[] = [];

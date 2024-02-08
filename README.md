@@ -87,6 +87,25 @@ state.write(5);
 
 The owner context is just all the rest of the methods on the state
 
+# Extending State
+
+To get full type functionality when extending a state you must do it like this, unless you know what you are doing
+
+```typescript
+class StateSpecial<R, W = R, L extends StateRelated = {}, A = W> extends State<
+  R,
+  W,
+  L,
+  A
+> {}
+```
+
+You can also extend a state and used fixed types, but you must supply all the types then
+
+```typescript
+class StateSpecial extends State<number, number, {}, number> {}
+```
+
 # Specialized States
 
 ## Enum State
@@ -118,6 +137,8 @@ const TestEnumState = new State(
 
 # Changelog
 
+- ## 0.2.5
+  Changed related default type to {} so it wouldn't be any and not check
 - ## 0.2.4
   Made list on StateEnumHelper mandatory\
   Added more documentation

@@ -12,7 +12,7 @@ export type StateError = {
   reason: string;
 };
 
-export type StateHelper<W, L extends StateRelated = any> = {
+export type StateHelper<W, L extends StateRelated = {}> = {
   limit?: (value: W) => Option<W>;
   check?: (value: W) => Option<string>;
   related?: () => Option<L>;
@@ -29,7 +29,7 @@ export type StateRelated = {
   [key: string | symbol | number]: any;
 };
 
-export interface StateReadAsync<R, L extends StateRelated = any> {
+export interface StateReadAsync<R, L extends StateRelated = {}> {
   /**Allows getting value of state*/
   then<TResult1 = R>(
     func: (value: StateResult<R>) => TResult1 | PromiseLike<TResult1>
@@ -42,7 +42,7 @@ export interface StateReadAsync<R, L extends StateRelated = any> {
   /**Returns a map of related states to this state*/
   related(): Option<L>;
 }
-export interface StateRead<R, L extends StateRelated = any>
+export interface StateRead<R, L extends StateRelated = {}>
   extends StateReadAsync<R, L> {
   /**Gets the value of the state, only available for sync state*/
   get(): StateResult<R>;
@@ -54,7 +54,7 @@ export interface StateRead<R, L extends StateRelated = any>
 //     \ \/  \/ / |  _  /  | |    | |  |  __| |  _  /  | |   | |  | | . ` |  | |  |  __|   > <    | |
 //      \  /\  /  | | \ \ _| |_   | |  | |____| | \ \  | |___| |__| | |\  |  | |  | |____ / . \   | |
 //       \/  \/   |_|  \_\_____|  |_|  |______|_|  \_\  \_____\____/|_| \_|  |_|  |______/_/ \_\  |_|
-export interface StateWriteAsync<R, W = R, L extends StateRelated = any>
+export interface StateWriteAsync<R, W = R, L extends StateRelated = {}>
   extends StateReadAsync<R, L> {
   /** This sets the value of the state and updates all subscribers */
   write(value: W): void;
@@ -63,5 +63,5 @@ export interface StateWriteAsync<R, W = R, L extends StateRelated = any>
   /**Checks if the value is valid and returns reason for invalidity */
   check: (value: W) => Option<string>;
 }
-export interface StateWrite<R, W = R, L extends StateRelated = any>
+export interface StateWrite<R, W = R, L extends StateRelated = {}>
   extends StateWriteAsync<R, W, L> {}

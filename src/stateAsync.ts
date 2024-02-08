@@ -2,7 +2,7 @@ import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
 import { StateHelper, StateResult, StateWriteAsync } from "./types";
 
-export class StateAsync<R, W = R, L extends {} = any, A = W>
+export class StateAsync<R, W = R, L extends {} = {}, A = W>
   extends StateBase<R, L>
   implements StateWriteAsync<R, W, L>
 {
