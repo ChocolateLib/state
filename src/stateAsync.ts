@@ -1,6 +1,6 @@
 import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateResult, StateWriteAsync } from "./types";
+import { StateHelper, StateResult, StateWriteAsync } from "./types";
 
 export class StateAsync<R, W = R, L extends {} = any>
   extends StateBase<R, L>
@@ -13,15 +13,11 @@ export class StateAsync<R, W = R, L extends {} = any>
    * @param related function returning the related states to this one*/
   constructor(
     init:
-      | StateResult<R>
-      | Promise<StateResult<R>>
-      | (() => Promise<StateResult<R>>),
+      | StateResult<Exclude<R, Function>>
+      | Promise<StateResult<Exclude<R, Function>>>
+      | (() => Promise<StateResult<Exclude<R, Function>>>),
     setter?: ((value: W) => Option<StateResult<R>>) | true,
-    helper?: {
-      limit?: (value: W) => Option<W>;
-      check?: (value: W) => Option<string>;
-      related?: () => Option<L>;
-    }
+    helper?: StateHelper<W, L>
   ) {
     super();
     if (setter)

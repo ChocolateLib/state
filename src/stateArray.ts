@@ -1,6 +1,6 @@
 import { Err, None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateError, StateResult, StateWrite } from "./types";
+import { StateError, StateHelper, StateResult, StateWrite } from "./types";
 
 export interface StateArrayRead<T> {
   array: readonly T[];
@@ -31,11 +31,7 @@ export class StateArray<T, L extends {} = any>
     setter?: (
       value: StateArrayWrite<T>
     ) => Option<StateResult<StateArrayWrite<T>>>,
-    helper?: {
-      limit?: (value: StateArrayWrite<T>) => Option<StateArrayWrite<T>>;
-      check?: (value: StateArrayWrite<T>) => Option<string>;
-      related?: () => Option<L>;
-    }
+    helper?: StateHelper<StateArrayWrite<T>, L>
   ) {
     super();
     if (setter) this.write = setter;

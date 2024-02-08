@@ -1,6 +1,6 @@
 import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
-import { StateRelated, StateResult, StateWrite } from "./types";
+import { StateHelper, StateRelated, StateResult, StateWrite } from "./types";
 
 export class State<R, W = R, L extends StateRelated = any>
   extends StateBase<R, L>
@@ -11,13 +11,11 @@ export class State<R, W = R, L extends StateRelated = any>
    * @param setter function called when state value is set via setter, set true let write set it's value
    * @param helper functions to check and limit the value, and to return related states */
   constructor(
-    init: StateResult<R> | (() => StateResult<R>),
+    init:
+      | StateResult<Exclude<R, Function>>
+      | (() => StateResult<Exclude<R, Function>>),
     setter?: ((value: W) => Option<StateResult<R>>) | true,
-    helper?: {
-      limit?: (value: W) => Option<W>;
-      check?: (value: W) => Option<string>;
-      related?: () => Option<L>;
-    }
+    helper?: StateHelper<W, L>
   ) {
     super();
     if (setter)

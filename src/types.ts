@@ -12,14 +12,10 @@ export type StateError = {
   reason: string;
 };
 
-/**Map of states related to a state */
-export type StateRelated = {
-  [key: string | symbol | number]:
-    | boolean
-    | string
-    | number
-    | StateReadAsync<any>
-    | StateRead<any>;
+export type StateHelper<W, L extends StateRelated = any> = {
+  limit?: (value: W) => Option<W>;
+  check?: (value: W) => Option<string>;
+  related?: () => Option<L>;
 };
 
 //    _____  ______          _____  ______ _____     _____ ____  _   _ _______ ________   _________
@@ -28,6 +24,11 @@ export type StateRelated = {
 //   |  _  /|  __|   / /\ \ | |  | |  __| |  _  /  | |   | |  | | . ` |  | |  |  __|   > <    | |
 //   | | \ \| |____ / ____ \| |__| | |____| | \ \  | |___| |__| | |\  |  | |  | |____ / . \   | |
 //   |_|  \_\______/_/    \_\_____/|______|_|  \_\  \_____\____/|_| \_|  |_|  |______/_/ \_\  |_|
+/**Map of states related to a state */
+export type StateRelated = {
+  [key: string | symbol | number]: any;
+};
+
 export interface StateReadAsync<R, L extends StateRelated = any> {
   /**Allows getting value of state*/
   then<TResult1 = R>(

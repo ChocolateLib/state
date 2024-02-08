@@ -160,65 +160,39 @@ export class StateStringHelper implements StateStringHelperType {
   }
 }
 
-export interface StateEnumHelperType {
-  list:
-    | {
-        [key: string | number]: {
-          name: string;
-          description?: string;
-          icon?: () => SVGSVGElement;
-        };
-      }
-    | undefined;
+export type StateEnumHelperList = {
+  [key: string | number | symbol]: {
+    name: string;
+    description?: string;
+    icon?: () => SVGSVGElement;
+  };
+};
+
+export interface StateEnumHelperType<T extends StateEnumHelperList> {
+  list?: T;
 }
 
-export class StateEnumHelper implements StateEnumHelperType {
-  list: {
-    [key: string | number]: {
-      name: string;
-      description?: string;
-      icon?: () => SVGSVGElement;
-    };
-  };
+export class StateEnumHelper<T extends StateEnumHelperList>
+  implements StateEnumHelperType<T>
+{
+  list: T;
 
-  constructor(list: {
-    [key: string | number]: {
-      name: string;
-      description?: string;
-      icon?: () => SVGSVGElement;
-    };
-  }) {
+  constructor(list: T) {
     this.list = list;
   }
 
-  check(value: string | number): Option<string> {
+  check(value: number): Option<string> {
     if (value in this.list) return None();
     return Some(value + " is not in list");
   }
 
-  limit(value: string | number): Option<string | number> {
+  limit(value: number): Option<number> {
     return Some(value);
   }
 
   related(): Option<{
-    list: {
-      [key: string | number]: {
-        name: string;
-        description?: string;
-        icon?: () => SVGSVGElement;
-      };
-    };
+    list: T;
   }> {
-    return Some(
-      this as {
-        list: {
-          [key: string | number]: {
-            name: string;
-            description?: string;
-            icon?: () => SVGSVGElement;
-          };
-        };
-      }
-    );
+    return Some(this as { list: T });
   }
 }
