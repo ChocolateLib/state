@@ -154,7 +154,7 @@ export type StateEnumHelperList = {
 };
 
 export interface StateEnumHelperType<T extends StateEnumHelperList> {
-  list?: T;
+  list: T;
 }
 export interface StateEnumHelperAnyType {
   list?: { [key: string | number | symbol]: { name: string } };

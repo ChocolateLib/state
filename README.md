@@ -87,8 +87,40 @@ state.write(5);
 
 The owner context is just all the rest of the methods on the state
 
+# Specialized States
+
+## Enum State
+
+You can descripe an enum state with the enum state helper
+
+```typescript
+export const enum TestEnum {
+  Key1 = "key1",
+  Key2 = "key2",
+}
+const TestEnumList = {
+  [TestEnum.Key1]: {
+    name: "Key 1",
+    icon: optional svg icon,
+  },
+  [TestEnum.Key2]: {
+    name: "Key 2",
+    description: "Optional long description",
+  },
+} satisfies StateEnumHelperList;
+
+const TestEnumState = new State(
+  TestEnum.Key1
+  true,
+  new StateEnumHelper(TestEnumList)
+)
+```
+
 # Changelog
 
+- ## 0.2.4
+  Made list on StateEnumHelper mandatory\
+  Added more documentation
 - ## 0.2.3
   Fixed enum helpers
 - ## 0.2.2
