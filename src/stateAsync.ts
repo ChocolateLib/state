@@ -2,7 +2,7 @@ import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
 import { StateHelper, StateResult, StateWriteAsync } from "./types";
 
-export class StateAsync<R, W = R, L extends {} = any>
+export class StateAsync<R, W = R, L extends {} = any, A = W>
   extends StateBase<R, L>
   implements StateWriteAsync<R, W, L>
 {
@@ -17,7 +17,7 @@ export class StateAsync<R, W = R, L extends {} = any>
       | Promise<StateResult<Exclude<R, Function>>>
       | (() => Promise<StateResult<Exclude<R, Function>>>),
     setter?: ((value: W) => Option<StateResult<R>>) | true,
-    helper?: StateHelper<W, L>
+    helper?: StateHelper<A, L>
   ) {
     super();
     if (setter)
@@ -75,15 +75,9 @@ export class StateAsync<R, W = R, L extends {} = any>
     }
   }
 
-  #value: StateResult<R> | undefined;
-  #setter: ((value: W) => Option<StateResult<R>>) | undefined;
-  #helper:
-    | {
-        limit?: (value: W) => Option<W>;
-        check?: (value: W) => Option<string>;
-        related?: () => Option<L>;
-      }
-    | undefined;
+  #value?: StateResult<R>;
+  #setter?: (value: W) => Option<StateResult<R>>;
+  #helper?: StateHelper<A, L>;
 
   //Reader Context
   async then<TResult1 = R>(
@@ -105,12 +99,14 @@ export class StateAsync<R, W = R, L extends {} = any>
 
   /**Checks the value against the limit set by the limiter, if no limiter is set, undefined is returned*/
   check(value: W): Option<string> {
-    return this.#helper?.check ? this.#helper.check(value) : None();
+    return this.#helper?.check ? this.#helper.check(value as any) : None();
   }
 
   /**Limits the value to the limit set by the limiter, if no limiter is set, the value is returned as is*/
   limit(value: W): Option<W> {
-    return this.#helper?.limit ? this.#helper.limit(value) : Some(value);
+    return this.#helper?.limit
+      ? (this.#helper.limit(value as any) as any)
+      : Some(value);
   }
 
   //Owner Context

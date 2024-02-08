@@ -1,4 +1,5 @@
 import { None, Option, Some } from "@chocolatelib/result";
+import { StateHelper } from "./types";
 
 export interface StateNumberHelperType {
   min?: number;
@@ -7,7 +8,9 @@ export interface StateNumberHelperType {
   decimals?: number;
 }
 
-export class StateNumberHelper implements StateNumberHelperType {
+export class StateNumberHelper
+  implements StateNumberHelperType, StateHelper<number, StateNumberHelperType>
+{
   min: number | undefined;
   max: number | undefined;
   unit: string | undefined;
@@ -90,20 +93,8 @@ export class StateNumberHelper implements StateNumberHelperType {
     );
   }
 
-  related(): Option<{
-    min: number;
-    max: number;
-    unit: string;
-    decimals: number;
-  }> {
-    return Some(
-      this as {
-        min: number;
-        max: number;
-        unit: string;
-        decimals: number;
-      }
-    );
+  related(): Option<StateNumberHelperType> {
+    return Some(this as StateNumberHelperType);
   }
 }
 
@@ -112,7 +103,9 @@ export interface StateStringHelperType {
   maxLengthBytes?: number;
 }
 
-export class StateStringHelper implements StateStringHelperType {
+export class StateStringHelper
+  implements StateStringHelperType, StateHelper<string, StateStringHelperType>
+{
   maxLength: number | undefined;
   maxLengthBytes: number | undefined;
   /**String limiter struct
@@ -147,16 +140,8 @@ export class StateStringHelper implements StateStringHelperType {
     }
     return Some(value);
   }
-  related(): Option<{
-    maxLength: number;
-    maxLengthBytes: number;
-  }> {
-    return Some(
-      this as {
-        maxLength: number;
-        maxLengthBytes: number;
-      }
-    );
+  related(): Option<StateStringHelperType> {
+    return Some(this as StateStringHelperType);
   }
 }
 
@@ -171,9 +156,14 @@ export type StateEnumHelperList = {
 export interface StateEnumHelperType<T extends StateEnumHelperList> {
   list?: T;
 }
+export interface StateEnumHelperAnyType {
+  list?: { [key: string | number | symbol]: { name: string } };
+}
 
-export class StateEnumHelper<T extends StateEnumHelperList>
-  implements StateEnumHelperType<T>
+export class StateEnumHelper<
+  K extends string | number | symbol,
+  T extends StateEnumHelperList
+> implements StateEnumHelperType<T>, StateHelper<K, StateEnumHelperType<T>>
 {
   list: T;
 
@@ -181,18 +171,16 @@ export class StateEnumHelper<T extends StateEnumHelperList>
     this.list = list;
   }
 
-  check(value: number): Option<string> {
+  check(value: K): Option<string> {
     if (value in this.list) return None();
-    return Some(value + " is not in list");
+    return Some(String(value) + " is not in list");
   }
 
-  limit(value: number): Option<number> {
+  limit(value: K): Option<K> {
     return Some(value);
   }
 
-  related(): Option<{
-    list: T;
-  }> {
-    return Some(this as { list: T });
+  related(): Option<StateEnumHelperType<T>> {
+    return Some(this as StateEnumHelperType<T>);
   }
 }

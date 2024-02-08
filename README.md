@@ -89,6 +89,8 @@ The owner context is just all the rest of the methods on the state
 
 # Changelog
 
+- ## 0.2.3
+  Fixed enum helpers
 - ## 0.2.2
   Fixed helpers
 - ## 0.2.0

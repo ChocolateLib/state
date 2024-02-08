@@ -2,7 +2,7 @@ import { None, Ok, Option, Some } from "@chocolatelib/result";
 import { StateBase } from "./stateBase";
 import { StateHelper, StateRelated, StateResult, StateWrite } from "./types";
 
-export class State<R, W = R, L extends StateRelated = any>
+export class State<R, W = R, L extends StateRelated = any, A = W>
   extends StateBase<R, L>
   implements StateWrite<R, W, L>
 {
@@ -15,7 +15,7 @@ export class State<R, W = R, L extends StateRelated = any>
       | StateResult<Exclude<R, Function>>
       | (() => StateResult<Exclude<R, Function>>),
     setter?: ((value: W) => Option<StateResult<R>>) | true,
-    helper?: StateHelper<W, L>
+    helper?: StateHelper<A, L>
   ) {
     super();
     if (setter)
@@ -66,15 +66,9 @@ export class State<R, W = R, L extends StateRelated = any>
     }
   }
 
-  #value: StateResult<R> | undefined;
-  #setter: ((value: W) => Option<StateResult<R>>) | undefined;
-  #helper:
-    | {
-        limit?: (value: W) => Option<W>;
-        check?: (value: W) => Option<string>;
-        related?: () => Option<L>;
-      }
-    | undefined;
+  #value?: StateResult<R>;
+  #setter?: (value: W) => Option<StateResult<R>>;
+  #helper?: StateHelper<A, L>;
 
   //Reader Context
   async then<TResult1 = R>(
@@ -100,12 +94,14 @@ export class State<R, W = R, L extends StateRelated = any>
 
   /**Checks the value against the limit set by the helper, returns a reason for value being unvalid or none if it is valid*/
   check(value: W): Option<string> {
-    return this.#helper?.check ? this.#helper.check(value) : None();
+    return this.#helper?.check ? this.#helper.check(value as any) : None();
   }
 
   /**Limits the value to the limit set by the helper, if no limiter is set, the value is returned as is*/
   limit(value: W): Option<W> {
-    return this.#helper?.limit ? this.#helper.limit(value) : Some(value);
+    return this.#helper?.limit
+      ? (this.#helper.limit(value as any) as any)
+      : Some(value);
   }
 
   //Owner Context

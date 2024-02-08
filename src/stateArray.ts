@@ -72,15 +72,9 @@ export class StateArray<T, L extends {} = any>
   }
 
   //Internal Context
-  #error: StateError | undefined;
+  #error?: StateError;
   #value: T[] = [];
-  #helper:
-    | {
-        limit?: (value: StateArrayWrite<T>) => Option<StateArrayWrite<T>>;
-        check?: (value: StateArrayWrite<T>) => Option<string>;
-        related?: () => Option<L>;
-      }
-    | undefined;
+  #helper?: StateHelper<StateArrayWrite<T>, L>;
 
   #set(value: StateResult<T[]>) {
     if (value.ok) {
