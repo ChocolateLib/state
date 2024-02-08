@@ -137,6 +137,8 @@ const TestEnumState = new State(
 
 # Changelog
 
+- ## 0.2.6
+  Fixed type of StateWrite missing get
 - ## 0.2.5
   Changed related default type to {} so it wouldn't be any and not check
 - ## 0.2.4

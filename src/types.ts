@@ -64,4 +64,5 @@ export interface StateWriteAsync<R, W = R, L extends StateRelated = {}>
   check: (value: W) => Option<string>;
 }
 export interface StateWrite<R, W = R, L extends StateRelated = {}>
-  extends StateWriteAsync<R, W, L> {}
+  extends StateRead<R, L>,
+    StateWriteAsync<R, W, L> {}
